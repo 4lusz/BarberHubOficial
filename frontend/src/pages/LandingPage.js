@@ -192,6 +192,105 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="py-20 lg:py-32" id="planos">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase">
+              Planos e Preços
+            </h2>
+            <p className="mt-4 text-muted-foreground text-lg">
+              Escolha o plano ideal para sua barbearia
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Plano Comum */}
+            <div className="rounded-2xl border border-border bg-card p-8 relative">
+              <div className="flex items-center gap-2 mb-4">
+                <Scissors className="w-6 h-6 text-primary" />
+                <h3 className="font-heading font-bold text-2xl uppercase">Plano Comum</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Para barbearias que querem sair do WhatsApp e organizar tudo
+              </p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">R$ 49,90</span>
+                <span className="text-muted-foreground">/mês</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Criação automática da barbearia',
+                  'Agendamentos online ilimitados',
+                  'Agenda digital organizada',
+                  'Cadastro de serviços',
+                  'Cadastro de profissionais',
+                  'Configuração de horários',
+                  'Link público para clientes',
+                  'Confirmação automática',
+                  'Acesso pelo celular ou PC'
+                ].map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/cadastro">
+                <Button className="w-full btn-press" variant="outline">
+                  Começar com 7 dias grátis
+                </Button>
+              </Link>
+            </div>
+
+            {/* Plano Premium */}
+            <div className="rounded-2xl border-2 border-primary bg-card p-8 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                  <Star className="w-4 h-4" />
+                  Mais Popular
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mb-4 mt-2">
+                <Zap className="w-6 h-6 text-primary" />
+                <h3 className="font-heading font-bold text-2xl uppercase">Plano Premium</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Para barbearias que querem gestão, controle e recorrência
+              </p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">R$ 99,90</span>
+                <span className="text-muted-foreground">/mês</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Tudo do Plano Comum +',
+                  'Relatórios de faturamento',
+                  'Lucro por profissional',
+                  'Lucro por horário de atendimento',
+                  'Estatísticas de horários vendidos',
+                  'Histórico financeiro',
+                  'Gestão avançada de clientes',
+                  'Criação de planos/mensalidades',
+                  'Controle de clientes recorrentes',
+                  'Prioridade em novidades'
+                ].map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/cadastro">
+                <Button className="w-full btn-press animate-pulse-glow">
+                  Começar com 7 dias grátis
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="py-12 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
