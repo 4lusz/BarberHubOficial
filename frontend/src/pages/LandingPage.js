@@ -298,11 +298,11 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               <Scissors className="w-6 h-6 text-primary" />
               <span className="font-heading font-bold text-xl uppercase">
-                <span className="text-primary">Barber</span>SaaS
+                <span className="text-primary">Barber</span>Hub
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} BarberSaaS. Todos os direitos reservados.
+              © {new Date().getFullYear()} BarberHub. Todos os direitos reservados.
             </p>
           </div>
         </div>
