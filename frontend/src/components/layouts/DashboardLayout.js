@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }) {
             <Menu className="w-6 h-6" />
           </button>
           <h1 className="font-heading font-bold text-xl uppercase tracking-tight">
-            {barbershop?.name || 'BarberSaaS'}
+            {barbershop?.name || 'BarberHub'}
           </h1>
           <div className="w-10" />
         </div>
