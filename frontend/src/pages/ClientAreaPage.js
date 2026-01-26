@@ -170,7 +170,7 @@ export default function ClientAreaPage() {
             <Link to="/" className="flex items-center gap-2">
               <Scissors className="w-6 h-6 text-primary" />
               <span className="font-heading font-bold text-xl uppercase">
-                <span className="text-primary">Barber</span>SaaS
+                <span className="text-primary">Barber</span>Hub
               </span>
             </Link>
             <Button variant="ghost" onClick={handleLogout} data-testid="client-logout-button">
