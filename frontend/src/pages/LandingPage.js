@@ -63,7 +63,7 @@ export default function LandingPage() {
             <Link to="/" className="flex items-center gap-2">
               <Scissors className="w-8 h-8 text-primary" />
               <span className="font-heading font-bold text-2xl uppercase tracking-tight">
-                <span className="text-primary">Barber</span>SaaS
+                <span className="text-primary">Barber</span>Hub
               </span>
             </Link>
             <div className="flex items-center gap-4">
