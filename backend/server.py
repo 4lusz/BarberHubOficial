@@ -836,7 +836,13 @@ async def update_business_hours(hours: List[BusinessHoursCreate], current_user: 
     if docs:
         await db.business_hours.insert_many(docs)
     
-    return docs
+    # Return the updated hours
+    updated_hours = await db.business_hours.find(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    ).to_list(7)
+    
+    return updated_hours
 
 
 # ==================== TIME BLOCKS ROUTES ====================
