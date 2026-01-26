@@ -25,7 +25,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Config
-JWT_SECRET = os.environ.get('JWT_SECRET', 'barbersaas-secret-key-change-in-production')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'barberhub-secret-key-change-in-production')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 168  # 7 days
 
@@ -33,8 +33,11 @@ JWT_EXPIRATION_HOURS = 168  # 7 days
 resend.api_key = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 
+# Mercado Pago Config
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
+
 # Create the main app
-app = FastAPI(title="BarberSaaS API")
+app = FastAPI(title="BarberHub API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -48,6 +51,44 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+# ==================== SUBSCRIPTION PLANS ====================
+SUBSCRIPTION_PLANS = {
+    "comum": {
+        "plan_id": "comum",
+        "name": "Plano Comum",
+        "price": 49.90,
+        "features": [
+            "Criação automática da barbearia",
+            "Agendamentos online ilimitados",
+            "Agenda digital organizada",
+            "Cadastro de serviços",
+            "Cadastro de profissionais",
+            "Configuração de horários",
+            "Link público para clientes",
+            "Confirmação automática de agendamentos",
+            "Acesso pelo celular ou computador"
+        ]
+    },
+    "premium": {
+        "plan_id": "premium",
+        "name": "Plano Premium",
+        "price": 99.90,
+        "features": [
+            "Tudo do Plano Comum +",
+            "Relatórios de faturamento",
+            "Lucro por profissional",
+            "Lucro por horário de atendimento",
+            "Estatísticas de horários mais vendidos",
+            "Histórico financeiro da barbearia",
+            "Gestão avançada de clientes",
+            "Criação de planos/mensalidades para clientes",
+            "Controle de clientes recorrentes",
+            "Prioridade em novas funcionalidades"
+        ]
+    }
+}
 
 
 # ==================== MODELS ====================
@@ -85,6 +126,14 @@ class BarbershopCreate(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
 
+class BarbershopUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    primary_color: Optional[str] = None
+    background_color: Optional[str] = None
+
 class Barbershop(BaseModel):
     barbershop_id: str
     owner_id: str
@@ -93,6 +142,11 @@ class Barbershop(BaseModel):
     description: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
+    primary_color: str = "#F59E0B"  # Amber default
+    background_color: str = "#09090B"  # Dark default
+    plan: str = "comum"  # comum or premium
+    plan_status: str = "trial"  # trial, active, expired, cancelled
+    plan_expires_at: Optional[datetime] = None
     created_at: datetime
 
 class ServiceCreate(BaseModel):
@@ -184,6 +238,13 @@ class AppointmentUpdate(BaseModel):
     date: Optional[str] = None
     time: Optional[str] = None
     notes: Optional[str] = None
+
+class SubscriptionPayment(BaseModel):
+    plan_id: str  # comum or premium
+    payment_method: str  # pix or card
+    customer_name: str
+    customer_email: str
+    customer_document: str  # CPF
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -300,7 +361,7 @@ async def send_email_notification(to_email: str, subject: str, html_content: str
 
 @api_router.get("/")
 async def root():
-    return {"message": "BarberSaaS API", "status": "ok"}
+    return {"message": "BarberHub API", "status": "ok"}
 
 
 # ==================== AUTH ROUTES ====================
@@ -329,7 +390,7 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user_doc)
     
-    # If barber, create barbershop
+    # If barber, create barbershop with 7-day trial
     barbershop = None
     if user_data.role == "barber" and user_data.barbershop_name:
         barbershop_id = generate_id("barb")
@@ -342,6 +403,8 @@ async def register(user_data: UserCreate):
             slug = f"{base_slug}-{counter}"
             counter += 1
         
+        trial_expires = datetime.now(timezone.utc) + timedelta(days=7)
+        
         barbershop_doc = {
             "barbershop_id": barbershop_id,
             "owner_id": user_id,
@@ -350,6 +413,11 @@ async def register(user_data: UserCreate):
             "description": None,
             "address": None,
             "phone": None,
+            "primary_color": "#F59E0B",
+            "background_color": "#09090B",
+            "plan": "comum",
+            "plan_status": "trial",
+            "plan_expires_at": trial_expires.isoformat(),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         
@@ -547,6 +615,157 @@ async def logout(response: Response, current_user: dict = Depends(get_current_us
     return {"message": "Logout realizado com sucesso"}
 
 
+# ==================== SUBSCRIPTION PLANS ROUTES ====================
+
+@api_router.get("/plans")
+async def get_plans():
+    return list(SUBSCRIPTION_PLANS.values())
+
+@api_router.post("/subscription/create")
+async def create_subscription(data: SubscriptionPayment, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    plan = SUBSCRIPTION_PLANS.get(data.plan_id)
+    if not plan:
+        raise HTTPException(status_code=400, detail="Plano não encontrado")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Create payment preference with Mercado Pago
+    if not MERCADOPAGO_ACCESS_TOKEN:
+        # For demo purposes, simulate payment success
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+        await db.barbershops.update_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"$set": {
+                "plan": data.plan_id,
+                "plan_status": "active",
+                "plan_expires_at": expires_at.isoformat()
+            }}
+        )
+        
+        # Log subscription
+        subscription_doc = {
+            "subscription_id": generate_id("sub"),
+            "barbershop_id": current_user["barbershop_id"],
+            "plan_id": data.plan_id,
+            "amount": plan["price"],
+            "payment_method": data.payment_method,
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": expires_at.isoformat()
+        }
+        await db.subscriptions.insert_one(subscription_doc)
+        
+        return {
+            "success": True,
+            "message": "Assinatura ativada com sucesso! (Modo demonstração - Mercado Pago não configurado)",
+            "plan": plan,
+            "expires_at": expires_at.isoformat()
+        }
+    
+    # Real Mercado Pago integration
+    try:
+        preference_data = {
+            "items": [{
+                "id": data.plan_id,
+                "title": plan["name"],
+                "description": f"Assinatura mensal - {plan['name']}",
+                "currency_id": "BRL",
+                "quantity": 1,
+                "unit_price": plan["price"]
+            }],
+            "payer": {
+                "email": data.customer_email,
+                "name": data.customer_name,
+                "identification": {
+                    "type": "CPF",
+                    "number": data.customer_document
+                }
+            },
+            "back_urls": {
+                "success": f"{os.environ.get('FRONTEND_URL', '')}/assinatura/sucesso",
+                "failure": f"{os.environ.get('FRONTEND_URL', '')}/assinatura/erro",
+                "pending": f"{os.environ.get('FRONTEND_URL', '')}/assinatura/pendente"
+            },
+            "auto_return": "approved",
+            "external_reference": f"{current_user['barbershop_id']}_{data.plan_id}_{datetime.now(timezone.utc).timestamp()}"
+        }
+        
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.post(
+                "https://api.mercadopago.com/checkout/preferences",
+                json=preference_data,
+                headers={
+                    "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                    "Content-Type": "application/json"
+                }
+            )
+            resp.raise_for_status()
+            mp_response = resp.json()
+        
+        return {
+            "success": True,
+            "payment_url": mp_response.get("init_point"),
+            "preference_id": mp_response.get("id"),
+            "plan": plan
+        }
+        
+    except Exception as e:
+        logger.error(f"Mercado Pago error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao processar pagamento")
+
+@api_router.post("/webhooks/mercadopago")
+async def mercadopago_webhook(request: Request):
+    """Handle Mercado Pago payment notifications"""
+    try:
+        data = await request.json()
+        logger.info(f"Mercado Pago webhook: {data}")
+        
+        if data.get("type") == "payment":
+            payment_id = data.get("data", {}).get("id")
+            
+            # Get payment details from Mercado Pago
+            async with httpx.AsyncClient() as client_http:
+                resp = await client_http.get(
+                    f"https://api.mercadopago.com/v1/payments/{payment_id}",
+                    headers={"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
+                )
+                
+                if resp.status_code == 200:
+                    payment_data = resp.json()
+                    external_ref = payment_data.get("external_reference", "")
+                    status = payment_data.get("status")
+                    
+                    if status == "approved" and external_ref:
+                        parts = external_ref.split("_")
+                        if len(parts) >= 2:
+                            barbershop_id = parts[0]
+                            plan_id = parts[1]
+                            
+                            expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+                            await db.barbershops.update_one(
+                                {"barbershop_id": barbershop_id},
+                                {"$set": {
+                                    "plan": plan_id,
+                                    "plan_status": "active",
+                                    "plan_expires_at": expires_at.isoformat()
+                                }}
+                            )
+        
+        return Response(status_code=200)
+    except Exception as e:
+        logger.error(f"Webhook error: {str(e)}")
+        return Response(status_code=200)
+
+
 # ==================== BARBERSHOP ROUTES ====================
 
 @api_router.get("/barbershops/me")
@@ -580,6 +799,8 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
         slug = f"{base_slug}-{counter}"
         counter += 1
     
+    trial_expires = datetime.now(timezone.utc) + timedelta(days=7)
+    
     barbershop_doc = {
         "barbershop_id": barbershop_id,
         "owner_id": current_user["user_id"],
@@ -588,6 +809,11 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
         "description": data.description,
         "address": data.address,
         "phone": data.phone,
+        "primary_color": "#F59E0B",
+        "background_color": "#09090B",
+        "plan": "comum",
+        "plan_status": "trial",
+        "plan_expires_at": trial_expires.isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -619,21 +845,29 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
     return {k: v for k, v in barbershop_doc.items() if k != "_id"}
 
 @api_router.put("/barbershops")
-async def update_barbershop(data: BarbershopCreate, current_user: dict = Depends(get_current_user)):
+async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
-    update_data = {
-        "name": data.name,
-        "description": data.description,
-        "address": data.address,
-        "phone": data.phone
-    }
+    update_data = {}
+    if data.name is not None:
+        update_data["name"] = data.name
+    if data.description is not None:
+        update_data["description"] = data.description
+    if data.address is not None:
+        update_data["address"] = data.address
+    if data.phone is not None:
+        update_data["phone"] = data.phone
+    if data.primary_color is not None:
+        update_data["primary_color"] = data.primary_color
+    if data.background_color is not None:
+        update_data["background_color"] = data.background_color
     
-    await db.barbershops.update_one(
-        {"barbershop_id": current_user["barbershop_id"]},
-        {"$set": update_data}
-    )
+    if update_data:
+        await db.barbershops.update_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"$set": update_data}
+        )
     
     barbershop = await db.barbershops.find_one(
         {"barbershop_id": current_user["barbershop_id"]},
@@ -1246,6 +1480,86 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         "pending_appointments": pending,
         "week_revenue": week_revenue,
         "total_clients": total_clients
+    }
+
+
+# ==================== REPORTS (PREMIUM) ====================
+
+@api_router.get("/reports/revenue")
+async def get_revenue_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    # Check if user has premium plan
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if barbershop.get("plan") != "premium" and barbershop.get("plan_status") != "trial":
+        raise HTTPException(status_code=403, detail="Recurso disponível apenas no plano Premium")
+    
+    barbershop_id = current_user["barbershop_id"]
+    
+    # Default to last 30 days
+    if not end_date:
+        end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if not start_date:
+        start_date = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    # Get completed appointments
+    appointments = await db.appointments.find({
+        "barbershop_id": barbershop_id,
+        "date": {"$gte": start_date, "$lte": end_date},
+        "status": "completed"
+    }, {"_id": 0}).to_list(1000)
+    
+    total_revenue = 0
+    revenue_by_service = {}
+    revenue_by_professional = {}
+    revenue_by_hour = {}
+    
+    for apt in appointments:
+        service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
+        if service:
+            price = service["price"]
+            total_revenue += price
+            
+            # By service
+            service_name = service["name"]
+            if service_name not in revenue_by_service:
+                revenue_by_service[service_name] = {"count": 0, "revenue": 0}
+            revenue_by_service[service_name]["count"] += 1
+            revenue_by_service[service_name]["revenue"] += price
+            
+            # By professional
+            if apt.get("professional_id"):
+                prof = await db.professionals.find_one({"professional_id": apt["professional_id"]}, {"_id": 0})
+                if prof:
+                    prof_name = prof["name"]
+                    if prof_name not in revenue_by_professional:
+                        revenue_by_professional[prof_name] = {"count": 0, "revenue": 0}
+                    revenue_by_professional[prof_name]["count"] += 1
+                    revenue_by_professional[prof_name]["revenue"] += price
+            
+            # By hour
+            hour = apt["time"].split(":")[0]
+            if hour not in revenue_by_hour:
+                revenue_by_hour[hour] = {"count": 0, "revenue": 0}
+            revenue_by_hour[hour]["count"] += 1
+            revenue_by_hour[hour]["revenue"] += price
+    
+    return {
+        "period": {"start": start_date, "end": end_date},
+        "total_revenue": total_revenue,
+        "total_appointments": len(appointments),
+        "by_service": revenue_by_service,
+        "by_professional": revenue_by_professional,
+        "by_hour": revenue_by_hour
     }
 
 
