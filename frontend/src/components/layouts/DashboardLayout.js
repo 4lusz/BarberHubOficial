@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }) {
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <h1 className="font-heading font-bold text-2xl uppercase tracking-tight">
-                <span className="text-primary">Barber</span>SaaS
+                <span className="text-primary">Barber</span>Hub
               </h1>
               <button
                 onClick={() => setIsSidebarOpen(false)}
