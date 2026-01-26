@@ -296,6 +296,13 @@ async def send_email_notification(to_email: str, subject: str, html_content: str
         return None
 
 
+# ==================== ROOT ROUTE ====================
+
+@api_router.get("/")
+async def root():
+    return {"message": "BarberSaaS API", "status": "ok"}
+
+
 # ==================== AUTH ROUTES ====================
 
 @api_router.post("/auth/register")
