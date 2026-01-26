@@ -113,6 +113,16 @@ function AppRouter() {
         }
       />
       <Route
+        path="/bloqueios"
+        element={
+          <ProtectedRoute requireBarbershop>
+            <DashboardLayout>
+              <TimeBlocksPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/agenda"
         element={
           <ProtectedRoute requireBarbershop>
