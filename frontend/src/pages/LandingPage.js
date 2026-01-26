@@ -8,7 +8,9 @@ import {
   Smartphone, 
   BarChart3,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Star,
+  Zap
 } from 'lucide-react';
 
 const features = [
