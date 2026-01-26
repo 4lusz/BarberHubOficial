@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import ServicesPage from './pages/ServicesPage';
 import ProfessionalsPage from './pages/ProfessionalsPage';
 import BusinessHoursPage from './pages/BusinessHoursPage';
+import TimeBlocksPage from './pages/TimeBlocksPage';
 import AgendaPage from './pages/AgendaPage';
 import SettingsPage from './pages/SettingsPage';
 import CreateBarbershopPage from './pages/CreateBarbershopPage';
