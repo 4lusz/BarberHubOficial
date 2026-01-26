@@ -19,13 +19,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors
+// Handle auth errors - but don't redirect automatically
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only remove token if we get a 401 on a protected route
+    // Don't redirect - let the auth context handle that
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      // Don't redirect here, let components handle it
+      // Check if this is NOT a login/register request
+      const isAuthRequest = error.config?.url?.includes('/auth/');
+      if (!isAuthRequest) {
+        // Token is invalid/expired - clear it
+        localStorage.removeItem('token');
+      }
     }
     return Promise.reject(error);
   }
