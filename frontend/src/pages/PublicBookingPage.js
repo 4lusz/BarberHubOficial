@@ -45,6 +45,10 @@ export default function PublicBookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Get custom colors from barbershop
+  const primaryColor = data?.barbershop?.primary_color || '#F59E0B';
+  const bgColor = data?.barbershop?.background_color || '#09090B';
+
   useEffect(() => {
     fetchBarbershop();
   }, [slug]);
@@ -54,6 +58,18 @@ export default function PublicBookingPage() {
       fetchAvailability();
     }
   }, [booking.service, booking.date, booking.professional]);
+
+  // Apply custom colors
+  useEffect(() => {
+    if (data?.barbershop) {
+      document.documentElement.style.setProperty('--booking-primary', primaryColor);
+      document.documentElement.style.setProperty('--booking-bg', bgColor);
+    }
+    return () => {
+      document.documentElement.style.removeProperty('--booking-primary');
+      document.documentElement.style.removeProperty('--booking-bg');
+    };
+  }, [data, primaryColor, bgColor]);
 
   const fetchBarbershop = async () => {
     try {
