@@ -16,6 +16,7 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
+  Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/servicos', label: 'Serviços', icon: Scissors },
   { href: '/profissionais', label: 'Profissionais', icon: Users },
   { href: '/horarios', label: 'Horários', icon: Clock },
+  { href: '/bloqueios', label: 'Bloqueios', icon: Ban },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
