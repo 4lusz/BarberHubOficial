@@ -382,32 +382,53 @@ def calculate_end_time(start_time: str, duration_minutes: int) -> str:
 
 def format_phone_for_whatsapp(phone: str) -> str:
     """Format phone number for WhatsApp (E.164 format)"""
-    # Remove all non-digits
+    # Remove all non-numeric characters
     digits = ''.join(filter(str.isdigit, phone))
+    
     # Add Brazil country code if not present
     if len(digits) == 11:  # Brazilian mobile with DDD
         digits = '55' + digits
-    elif len(digits) == 10:  # Brazilian landline with DDD
+    elif len(digits) == 10:  # Brazilian mobile without 9
         digits = '55' + digits
-    return f"whatsapp:+{digits}"
+    
+    return '+' + digits
 
 async def send_whatsapp_message(phone: str, message: str):
-    """Send WhatsApp message via Twilio"""
-    if not twilio_client:
-        logger.warning("Twilio not configured, skipping WhatsApp")
+    """Send WhatsApp message via Respond.io API"""
+    if not RESPONDIO_API_TOKEN or not RESPONDIO_SPACE_ID or not RESPONDIO_CHANNEL_ID:
+        logger.warning("Respond.io not configured, skipping WhatsApp")
         return None
     
     try:
-        to_number = format_phone_for_whatsapp(phone)
-        twilio_message = twilio_client.messages.create(
-            body=message,
-            from_=TWILIO_WHATSAPP_NUMBER,
-            to=to_number
-        )
-        logger.info(f"WhatsApp sent to {phone}: {twilio_message.sid}")
-        return twilio_message.sid
+        formatted_phone = format_phone_for_whatsapp(phone)
+        
+        async with httpx.AsyncClient() as http_client:
+            # First, find or create contact
+            contact_response = await http_client.post(
+                f"https://api.respond.io/v2/contact/phone:{formatted_phone}/message",
+                json={
+                    "message": {
+                        "type": "text",
+                        "text": message
+                    },
+                    "channelId": int(RESPONDIO_CHANNEL_ID)
+                },
+                headers={
+                    "Authorization": f"Bearer {RESPONDIO_API_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                timeout=30
+            )
+            
+            if contact_response.status_code in [200, 201]:
+                result = contact_response.json()
+                logger.info(f"WhatsApp sent via Respond.io to {phone}")
+                return result.get('id', 'sent')
+            else:
+                logger.error(f"Respond.io error: {contact_response.status_code} - {contact_response.text}")
+                return None
     except Exception as e:
-        logger.error(f"Twilio failed: {str(e)}")
+        logger.error(f"Respond.io failed: {str(e)}")
         return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
