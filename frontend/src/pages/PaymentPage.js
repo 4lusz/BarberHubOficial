@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { 
   Scissors, 
@@ -13,8 +14,8 @@ import {
   QrCode, 
   Lock, 
   ArrowLeft,
-  CheckCircle,
-  Loader2
+  Loader2,
+  MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,7 +30,13 @@ export default function PaymentPage() {
   const { user, checkAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('pix');
-  const [barbershopName, setBarbershopName] = useState('');
+  const [barbershopData, setBarbershopData] = useState({
+    name: '',
+    address: '',
+    phone: '',
+    latitude: null,
+    longitude: null,
+  });
   const [formData, setFormData] = useState({
     customer_name: user?.name || '',
     customer_email: user?.email || '',
@@ -45,6 +52,16 @@ export default function PaymentPage() {
     }
   }, [planId, plan, navigate]);
 
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        customer_name: user.name || '',
+        customer_email: user.email || '',
+      }));
+    }
+  }, [user]);
+
   const formatCPF = (value) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 3) return numbers;
@@ -58,10 +75,34 @@ export default function PaymentPage() {
     setFormData({ ...formData, customer_document: formatted });
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocalização não é suportada pelo seu navegador');
+      return;
+    }
+
+    toast.info('Obtendo sua localização...');
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setBarbershopData(prev => ({
+          ...prev,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }));
+        toast.success('Localização obtida com sucesso!');
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast.error('Não foi possível obter sua localização');
+      }
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!barbershopName.trim()) {
+    if (!barbershopData.name.trim()) {
       toast.error('Por favor, informe o nome da barbearia');
       return;
     }
@@ -75,11 +116,15 @@ export default function PaymentPage() {
 
     try {
       // First create the barbershop
-      const barbershopResponse = await api.post('/barbershops', {
-        name: barbershopName
+      await api.post('/barbershops', {
+        name: barbershopData.name,
+        address: barbershopData.address,
+        phone: barbershopData.phone,
+        latitude: barbershopData.latitude,
+        longitude: barbershopData.longitude,
       });
 
-      // Then process payment
+      // Then process payment/subscription
       const paymentResponse = await api.post('/subscription/create', {
         plan_id: planId,
         payment_method: paymentMethod,
@@ -89,13 +134,14 @@ export default function PaymentPage() {
       });
 
       if (paymentResponse.data.success) {
-        // If there's a payment URL, redirect to it
         if (paymentResponse.data.payment_url) {
+          // Real payment - redirect to Mercado Pago
           window.location.href = paymentResponse.data.payment_url;
         } else {
-          // Demo mode - payment processed immediately
+          // Demo mode - activate barbershop directly
+          await api.post(`/barbershops/activate?plan_id=${planId}`);
           toast.success('Pagamento processado com sucesso!');
-          await checkAuth(); // Refresh auth to get updated barbershop
+          await checkAuth();
           navigate('/dashboard');
         }
       }
@@ -158,6 +204,77 @@ export default function PaymentPage() {
             </CardContent>
           </Card>
 
+          {/* Barbershop Info */}
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
+                <Scissors className="w-5 h-5 text-primary" />
+                Dados da Barbearia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="barbershop_name">Nome da Barbearia *</Label>
+                <Input
+                  id="barbershop_name"
+                  placeholder="Ex: Barbearia do João"
+                  value={barbershopData.name}
+                  onChange={(e) => setBarbershopData({ ...barbershopData, name: e.target.value })}
+                  required
+                  data-testid="barbershop-name-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="barbershop_phone">Telefone/WhatsApp</Label>
+                <Input
+                  id="barbershop_phone"
+                  placeholder="(11) 99999-9999"
+                  value={barbershopData.phone}
+                  onChange={(e) => setBarbershopData({ ...barbershopData, phone: e.target.value })}
+                  data-testid="barbershop-phone-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="barbershop_address">Endereço</Label>
+                <Textarea
+                  id="barbershop_address"
+                  placeholder="Rua, número, bairro, cidade..."
+                  value={barbershopData.address}
+                  onChange={(e) => setBarbershopData({ ...barbershopData, address: e.target.value })}
+                  rows={2}
+                  data-testid="barbershop-address-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Localização (Google Maps)</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGetLocation}
+                    className="flex-1"
+                    data-testid="get-location-button"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Obter Localização Atual
+                  </Button>
+                </div>
+                {barbershopData.latitude && barbershopData.longitude && (
+                  <p className="text-sm text-green-500 flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    Localização capturada: {barbershopData.latitude.toFixed(4)}, {barbershopData.longitude.toFixed(4)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  A localização será exibida aos clientes após o agendamento
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Payment Form */}
           <Card className="border-border">
             <CardHeader>
@@ -168,19 +285,6 @@ export default function PaymentPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Barbershop Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="barbershop_name">Nome da Barbearia *</Label>
-                  <Input
-                    id="barbershop_name"
-                    placeholder="Ex: Barbearia do João"
-                    value={barbershopName}
-                    onChange={(e) => setBarbershopName(e.target.value)}
-                    required
-                    data-testid="barbershop-name-input"
-                  />
-                </div>
-
                 {/* Customer Name */}
                 <div className="space-y-2">
                   <Label htmlFor="customer_name">Nome Completo *</Label>
