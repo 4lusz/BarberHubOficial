@@ -512,25 +512,26 @@ export default function PublicBookingPage() {
                     <span className="text-white">{booking.date && format(booking.date, "dd/MM/yyyy")}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Horário</span>
-                    <span>{booking.time}</span>
+                    <span className="text-gray-400">Horário</span>
+                    <span className="text-white">{booking.time}</span>
                   </div>
                   {booking.professional && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Profissional</span>
-                      <span>{booking.professional.name}</span>
+                      <span className="text-gray-400">Profissional</span>
+                      <span className="text-white">{booking.professional.name}</span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-2 border-t border-border font-medium">
-                    <span>Total</span>
-                    <span className="text-primary">{formatCurrency(booking.service?.price || 0)}</span>
+                  <div className="flex justify-between pt-2 border-t border-gray-700 font-medium">
+                    <span className="text-white">Total</span>
+                    <span style={{ color: primaryColor }}>{formatCurrency(booking.service?.price || 0)}</span>
                   </div>
                 </CardContent>
               </Card>
 
               <Button
                 type="submit"
-                className="w-full btn-press text-lg h-12"
+                className="w-full btn-press text-lg h-12 text-white"
+                style={{ backgroundColor: primaryColor }}
                 disabled={submitting}
                 data-testid="confirm-booking-button"
               >
