@@ -19,6 +19,7 @@ import PaymentPage from './pages/PaymentPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PublicBookingPage from './pages/PublicBookingPage';
 import ClientAreaPage from './pages/ClientAreaPage';
+import ReportsPage from './pages/ReportsPage';
 
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
