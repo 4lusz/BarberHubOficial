@@ -361,26 +361,29 @@ export default function PublicBookingPage() {
                     <User className="w-6 h-6 text-gray-400" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Sem preferência</h3>
-                    <p className="text-sm text-muted-foreground">Qualquer profissional disponível</p>
+                    <h3 className="font-medium text-white">Sem preferência</h3>
+                    <p className="text-sm text-gray-400">Qualquer profissional disponível</p>
                   </div>
                 </CardContent>
               </Card>
               {professionals.map((prof) => (
                 <Card
                   key={prof.professional_id}
-                  className="border-border hover:border-primary/50 cursor-pointer transition-all"
+                  className="border-gray-700 bg-gray-800/50 hover:border-opacity-50 cursor-pointer transition-all"
                   onClick={() => handleProfessionalSelect(prof)}
                   data-testid={`professional-option-${prof.professional_id}`}
                 >
                   <CardContent className="py-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary font-bold text-lg">
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: `${primaryColor}20` }}
+                    >
+                      <span className="font-bold text-lg" style={{ color: primaryColor }}>
                         {prof.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <h3 className="font-medium">{prof.name}</h3>
+                      <h3 className="font-medium text-white">{prof.name}</h3>
                     </div>
                   </CardContent>
                 </Card>
@@ -392,9 +395,9 @@ export default function PublicBookingPage() {
         {/* Step: Date & Time Selection */}
         {step === 'datetime' && (
           <div className="space-y-6 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase">Escolha a Data e Horário</h2>
+            <h2 className="font-heading text-2xl uppercase text-white">Escolha a Data e Horário</h2>
             
-            <Card className="border-border">
+            <Card className="border-gray-700 bg-gray-800/50">
               <CardContent className="py-4">
                 <Calendar
                   mode="single"
@@ -409,7 +412,7 @@ export default function PublicBookingPage() {
 
             {booking.date && (
               <div className="space-y-3">
-                <h3 className="font-medium">
+                <h3 className="font-medium text-white">
                   Horários disponíveis em {format(booking.date, "dd 'de' MMMM", { locale: ptBR })}
                 </h3>
                 
@@ -420,8 +423,8 @@ export default function PublicBookingPage() {
                     ))}
                   </div>
                 ) : availableSlots.length === 0 ? (
-                  <Card className="border-border bg-secondary/30">
-                    <CardContent className="py-6 text-center text-muted-foreground">
+                  <Card className="border-gray-700 bg-gray-800/30">
+                    <CardContent className="py-6 text-center text-gray-400">
                       Nenhum horário disponível nesta data. Escolha outra data.
                     </CardContent>
                   </Card>
