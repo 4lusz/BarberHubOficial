@@ -596,7 +596,7 @@ async def get_scheduler_status():
     return {
         "running": scheduler.running,
         "jobs": jobs,
-        "respondio_configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_SPACE_ID and RESPONDIO_CHANNEL_ID),
+        "respondio_configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID),
         "mercadopago_configured": bool(MERCADOPAGO_ACCESS_TOKEN)
     }
 
