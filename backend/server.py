@@ -519,6 +519,41 @@ async def trigger_subscription_check(background_tasks: BackgroundTasks):
     background_tasks.add_task(check_expired_subscriptions)
     return {"status": "Subscription check scheduled"}
 
+@api_router.post("/tasks/test-whatsapp")
+async def test_whatsapp_notification(phone: str):
+    """Test WhatsApp notification - for debugging"""
+    if not twilio_client:
+        return {"success": False, "error": "Twilio not configured"}
+    
+    try:
+        result = await send_whatsapp_reminder(
+            phone=phone,
+            barbershop_name="BarberHub Teste",
+            service_name="Corte de Cabelo",
+            date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            time="15:00",
+            address="Rua Teste, 123"
+        )
+        return {"success": True, "message_sid": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@api_router.get("/tasks/scheduler-status")
+async def get_scheduler_status():
+    """Get scheduler status and next run times"""
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            "id": job.id,
+            "next_run": job.next_run_time.isoformat() if job.next_run_time else None
+        })
+    return {
+        "running": scheduler.running,
+        "jobs": jobs,
+        "twilio_configured": twilio_client is not None,
+        "mercadopago_configured": bool(MERCADOPAGO_ACCESS_TOKEN)
+    }
+
 
 # ==================== AUTH ROUTES ====================
 
