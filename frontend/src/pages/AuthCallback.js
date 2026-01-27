@@ -26,7 +26,7 @@ export default function AuthCallback() {
       const sessionId = sessionIdMatch[1];
 
       try {
-        const user = await loginWithGoogle(sessionId);
+        const { user, needs_payment } = await loginWithGoogle(sessionId);
         
         // Clear the hash
         window.history.replaceState(null, '', window.location.pathname);
@@ -34,7 +34,11 @@ export default function AuthCallback() {
         toast.success('Login realizado com sucesso!');
         
         if (user.role === 'barber') {
-          navigate(user.barbershop_id ? '/dashboard' : '/criar-barbearia', { replace: true });
+          if (needs_payment || !user.barbershop_id) {
+            navigate('/escolher-plano', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
         } else {
           navigate('/minha-area', { replace: true });
         }
