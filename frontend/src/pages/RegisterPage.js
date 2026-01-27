@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Scissors, Mail, Lock, User, Store, ArrowLeft } from 'lucide-react';
+import { Scissors, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RegisterPage() {
@@ -16,7 +16,6 @@ export default function RegisterPage() {
     name: '',
     email: '',
     password: '',
-    barbershop_name: '',
   });
 
   const handleSubmit = async (e) => {
@@ -24,12 +23,19 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register({
+      const { needs_payment } = await register({
         ...formData,
         role: 'barber',
       });
+      
       toast.success('Conta criada com sucesso!');
-      navigate('/dashboard');
+      
+      // Redirect to plan selection if payment is needed
+      if (needs_payment) {
+        navigate('/escolher-plano');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao criar conta');
     } finally {
@@ -39,7 +45,7 @@ export default function RegisterPage() {
 
   const handleGoogleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/dashboard';
+    const redirectUrl = window.location.origin + '/escolher-plano';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
@@ -82,23 +88,6 @@ export default function RegisterPage() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
                     data-testid="name-input"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="barbershop_name">Nome da barbearia</Label>
-                <div className="relative">
-                  <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="barbershop_name"
-                    type="text"
-                    placeholder="Barbearia do João"
-                    className="pl-10"
-                    value={formData.barbershop_name}
-                    onChange={(e) => setFormData({ ...formData, barbershop_name: e.target.value })}
-                    required
-                    data-testid="barbershop-name-input"
                   />
                 </div>
               </div>
