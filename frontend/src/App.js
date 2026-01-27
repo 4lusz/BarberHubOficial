@@ -14,7 +14,8 @@ import BusinessHoursPage from './pages/BusinessHoursPage';
 import TimeBlocksPage from './pages/TimeBlocksPage';
 import AgendaPage from './pages/AgendaPage';
 import SettingsPage from './pages/SettingsPage';
-import CreateBarbershopPage from './pages/CreateBarbershopPage';
+import SelectPlanPage from './pages/SelectPlanPage';
+import PaymentPage from './pages/PaymentPage';
 import PublicBookingPage from './pages/PublicBookingPage';
 import ClientAreaPage from './pages/ClientAreaPage';
 
@@ -23,6 +24,30 @@ import DashboardLayout from './components/layouts/DashboardLayout';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireBarbershop = false }) => {
+  const { isAuthenticated, loading, user, barbershop, needsPayment } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-primary">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If user is a barber without barbershop, redirect to plan selection
+  if (requireBarbershop && user?.role === 'barber' && !barbershop) {
+    return <Navigate to="/escolher-plano" replace />;
+  }
+
+  return children;
+};
+
+// Payment Flow Route - Only for users who need to pay
+const PaymentFlowRoute = ({ children }) => {
   const { isAuthenticated, loading, user, barbershop } = useAuth();
 
   if (loading) {
@@ -37,8 +62,9 @@ const ProtectedRoute = ({ children, requireBarbershop = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requireBarbershop && user?.role === 'barber' && !barbershop) {
-    return <Navigate to="/criar-barbearia" replace />;
+  // If already has barbershop, go to dashboard
+  if (user?.role === 'barber' && barbershop) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -63,13 +89,21 @@ function AppRouter() {
       <Route path="/b/:slug" element={<PublicBookingPage />} />
       <Route path="/minha-area" element={<ClientAreaPage />} />
       
-      {/* Protected Routes - Barber */}
+      {/* Payment Flow Routes */}
       <Route
-        path="/criar-barbearia"
+        path="/escolher-plano"
         element={
-          <ProtectedRoute>
-            <CreateBarbershopPage />
-          </ProtectedRoute>
+          <PaymentFlowRoute>
+            <SelectPlanPage />
+          </PaymentFlowRoute>
+        }
+      />
+      <Route
+        path="/pagamento"
+        element={
+          <PaymentFlowRoute>
+            <PaymentPage />
+          </PaymentFlowRoute>
         }
       />
       <Route

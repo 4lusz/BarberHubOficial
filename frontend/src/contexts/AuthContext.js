@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [barbershop, setBarbershop] = useState(null);
+  const [needsPayment, setNeedsPayment] = useState(false);
 
   const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -30,6 +31,9 @@ export const AuthProvider = ({ children }) => {
       if (response.data.role === 'barber' && response.data.barbershop_id) {
         const barbershopRes = await api.get('/barbershops/me');
         setBarbershop(barbershopRes.data);
+        setNeedsPayment(false);
+      } else if (response.data.role === 'barber' && !response.data.barbershop_id) {
+        setNeedsPayment(true);
       }
     } catch (error) {
       localStorage.removeItem('token');
@@ -45,45 +49,45 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    const { token, user: userData } = response.data;
+    const { token, user: userData, needs_payment } = response.data;
     
     localStorage.setItem('token', token);
     setUser(userData);
+    setNeedsPayment(needs_payment || false);
     
     if (userData.role === 'barber' && userData.barbershop_id) {
       const barbershopRes = await api.get('/barbershops/me');
       setBarbershop(barbershopRes.data);
     }
     
-    return userData;
+    return { user: userData, needs_payment };
   };
 
   const register = async (data) => {
     const response = await api.post('/auth/register', data);
-    const { token, user: userData, barbershop: barbershopData } = response.data;
+    const { token, user: userData, needs_payment } = response.data;
     
     localStorage.setItem('token', token);
     setUser(userData);
-    if (barbershopData) {
-      setBarbershop(barbershopData);
-    }
+    setNeedsPayment(needs_payment || false);
     
-    return userData;
+    return { user: userData, needs_payment };
   };
 
   const loginWithGoogle = async (sessionId) => {
     const response = await api.post(`/auth/google-session?session_id=${sessionId}`);
-    const { token, user: userData } = response.data;
+    const { token, user: userData, needs_payment } = response.data;
     
     localStorage.setItem('token', token);
     setUser(userData);
+    setNeedsPayment(needs_payment || false);
     
     if (userData.role === 'barber' && userData.barbershop_id) {
       const barbershopRes = await api.get('/barbershops/me');
       setBarbershop(barbershopRes.data);
     }
     
-    return userData;
+    return { user: userData, needs_payment };
   };
 
   const logout = async () => {
@@ -95,16 +99,19 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
     setBarbershop(null);
+    setNeedsPayment(false);
   };
 
   const updateBarbershop = (data) => {
     setBarbershop(data);
+    setNeedsPayment(false);
   };
 
   const value = {
     user,
     loading,
     barbershop,
+    needsPayment,
     login,
     register,
     loginWithGoogle,
