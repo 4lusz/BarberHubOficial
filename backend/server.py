@@ -398,53 +398,23 @@ def format_phone_for_whatsapp(phone: str) -> str:
     return f"whatsapp:+{digits}"
 
 async def send_whatsapp_message(phone: str, message: str):
-    """Send WhatsApp message via configured provider (Twilio or Evolution API)"""
-    to_number = format_phone_for_whatsapp(phone)
+    """Send WhatsApp message via Twilio"""
+    if not twilio_client:
+        logger.warning("Twilio not configured, skipping WhatsApp")
+        return None
     
-    # Try Evolution API first if configured
-    if EVOLUTION_API_URL and EVOLUTION_API_KEY:
-        try:
-            # Format phone for Evolution API (just numbers with country code)
-            evolution_phone = to_number.replace("whatsapp:", "").replace("+", "")
-            
-            async with httpx.AsyncClient() as http_client:
-                response = await http_client.post(
-                    f"{EVOLUTION_API_URL}/message/sendText/{EVOLUTION_INSTANCE}",
-                    json={
-                        "number": evolution_phone,
-                        "text": message
-                    },
-                    headers={
-                        "apikey": EVOLUTION_API_KEY,
-                        "Content-Type": "application/json"
-                    },
-                    timeout=30
-                )
-                
-                if response.status_code == 200 or response.status_code == 201:
-                    result = response.json()
-                    logger.info(f"Evolution API WhatsApp sent to {phone}: {result.get('key', {}).get('id', 'sent')}")
-                    return result.get('key', {}).get('id', 'evolution_sent')
-                else:
-                    logger.error(f"Evolution API error: {response.status_code} - {response.text}")
-        except Exception as e:
-            logger.error(f"Evolution API failed: {str(e)}")
-    
-    # Fallback to Twilio if Evolution fails or not configured
-    if twilio_client:
-        try:
-            twilio_message = twilio_client.messages.create(
-                body=message,
-                from_=TWILIO_WHATSAPP_NUMBER,
-                to=to_number
-            )
-            logger.info(f"Twilio WhatsApp sent to {phone}: {twilio_message.sid}")
-            return twilio_message.sid
-        except Exception as e:
-            logger.error(f"Twilio failed: {str(e)}")
-    
-    logger.warning("No WhatsApp provider configured or all providers failed")
-    return None
+    try:
+        to_number = format_phone_for_whatsapp(phone)
+        twilio_message = twilio_client.messages.create(
+            body=message,
+            from_=TWILIO_WHATSAPP_NUMBER,
+            to=to_number
+        )
+        logger.info(f"WhatsApp sent to {phone}: {twilio_message.sid}")
+        return twilio_message.sid
+    except Exception as e:
+        logger.error(f"Twilio failed: {str(e)}")
+        return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
                                   date: str, time: str, address: str = None):
