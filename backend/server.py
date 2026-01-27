@@ -417,20 +417,32 @@ async def send_whatsapp_message(phone: str, message: str):
         return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
-                                  date: str, time: str, address: str = None):
-    """Send WhatsApp reminder"""
-    # Format message
+                                  date: str, time: str, address: str = None, 
+                                  latitude: float = None, longitude: float = None):
+    """Send WhatsApp reminder with barbershop info and location"""
+    # Format date for Brazilian format
+    try:
+        from datetime import datetime as dt
+        date_obj = dt.strptime(date, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%d/%m/%Y")
+    except:
+        formatted_date = date
+    
     message_body = f"""🔔 *Lembrete de Agendamento*
 
-Olá! Seu horário está chegando:
+Olá! Você tem um horário marcado na *{barbershop_name}* em 30 minutos!
 
-📍 *{barbershop_name}*
 ✂️ Serviço: {service_name}
-📅 Data: {date}
+📅 Data: {formatted_date}
 ⏰ Horário: {time}"""
     
     if address:
         message_body += f"\n📌 Endereço: {address}"
+    
+    # Add Google Maps link if coordinates available
+    if latitude and longitude:
+        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+        message_body += f"\n🗺️ Ver no mapa: {maps_link}"
     
     message_body += "\n\nTe esperamos! 💈"
     
