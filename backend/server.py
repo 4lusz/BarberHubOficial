@@ -49,6 +49,9 @@ twilio_client = None
 if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
     twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
+# Initialize scheduler for background jobs
+scheduler = AsyncIOScheduler()
+
 # Create the main app
 app = FastAPI(title="BarberHub API")
 
