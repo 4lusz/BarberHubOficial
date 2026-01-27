@@ -16,6 +16,8 @@ from datetime import datetime, timezone, timedelta
 import httpx
 import resend
 from twilio.rest import Client as TwilioClient
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
