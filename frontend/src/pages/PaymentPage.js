@@ -1,0 +1,300 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import { 
+  Scissors, 
+  CreditCard, 
+  QrCode, 
+  Lock, 
+  ArrowLeft,
+  CheckCircle,
+  Loader2
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+const plans = {
+  comum: { name: 'Plano Comum', price: 49.90 },
+  premium: { name: 'Plano Premium', price: 99.90 }
+};
+
+export default function PaymentPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, checkAuth } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [barbershopName, setBarbershopName] = useState('');
+  const [formData, setFormData] = useState({
+    customer_name: user?.name || '',
+    customer_email: user?.email || '',
+    customer_document: '', // CPF
+  });
+
+  const planId = searchParams.get('plano');
+  const plan = plans[planId];
+
+  useEffect(() => {
+    if (!planId || !plan) {
+      navigate('/escolher-plano');
+    }
+  }, [planId, plan, navigate]);
+
+  const formatCPF = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const handleCPFChange = (e) => {
+    const formatted = formatCPF(e.target.value);
+    setFormData({ ...formData, customer_document: formatted });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!barbershopName.trim()) {
+      toast.error('Por favor, informe o nome da barbearia');
+      return;
+    }
+
+    if (formData.customer_document.replace(/\D/g, '').length !== 11) {
+      toast.error('CPF inválido');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // First create the barbershop
+      const barbershopResponse = await api.post('/barbershops', {
+        name: barbershopName
+      });
+
+      // Then process payment
+      const paymentResponse = await api.post('/subscription/create', {
+        plan_id: planId,
+        payment_method: paymentMethod,
+        customer_name: formData.customer_name,
+        customer_email: formData.customer_email,
+        customer_document: formData.customer_document.replace(/\D/g, ''),
+      });
+
+      if (paymentResponse.data.success) {
+        // If there's a payment URL, redirect to it
+        if (paymentResponse.data.payment_url) {
+          window.location.href = paymentResponse.data.payment_url;
+        } else {
+          // Demo mode - payment processed immediately
+          toast.success('Pagamento processado com sucesso!');
+          await checkAuth(); // Refresh auth to get updated barbershop
+          navigate('/dashboard');
+        }
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(error.response?.data?.detail || 'Erro ao processar pagamento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!plan) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/escolher-plano')}
+          className="mb-6"
+          data-testid="back-to-plans-button"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar para planos
+        </Button>
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Scissors className="w-8 h-8 text-primary" />
+            </div>
+          </div>
+          <h1 className="font-heading font-bold text-3xl uppercase tracking-tight">
+            Finalizar Assinatura
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Complete os dados para ativar seu {plan.name}
+          </p>
+        </div>
+
+        <div className="grid gap-6">
+          {/* Order Summary */}
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="font-heading text-lg uppercase">Resumo do Pedido</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span>{plan.name}</span>
+                <span className="font-medium">R$ {plan.price.toFixed(2).replace('.', ',')}/mês</span>
+              </div>
+              <div className="flex items-center justify-between py-2 font-bold text-lg">
+                <span>Total</span>
+                <span className="text-primary">R$ {plan.price.toFixed(2).replace('.', ',')}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Form */}
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
+                <Lock className="w-5 h-5 text-primary" />
+                Dados para Pagamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Barbershop Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="barbershop_name">Nome da Barbearia *</Label>
+                  <Input
+                    id="barbershop_name"
+                    placeholder="Ex: Barbearia do João"
+                    value={barbershopName}
+                    onChange={(e) => setBarbershopName(e.target.value)}
+                    required
+                    data-testid="barbershop-name-input"
+                  />
+                </div>
+
+                {/* Customer Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="customer_name">Nome Completo *</Label>
+                  <Input
+                    id="customer_name"
+                    placeholder="Seu nome completo"
+                    value={formData.customer_name}
+                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                    required
+                    data-testid="customer-name-input"
+                  />
+                </div>
+
+                {/* Customer Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="customer_email">Email *</Label>
+                  <Input
+                    id="customer_email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={formData.customer_email}
+                    onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
+                    required
+                    data-testid="customer-email-input"
+                  />
+                </div>
+
+                {/* CPF */}
+                <div className="space-y-2">
+                  <Label htmlFor="customer_document">CPF *</Label>
+                  <Input
+                    id="customer_document"
+                    placeholder="000.000.000-00"
+                    value={formData.customer_document}
+                    onChange={handleCPFChange}
+                    maxLength={14}
+                    required
+                    data-testid="customer-cpf-input"
+                  />
+                </div>
+
+                {/* Payment Method */}
+                <div className="space-y-3">
+                  <Label>Forma de Pagamento *</Label>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={setPaymentMethod}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <div>
+                      <RadioGroupItem
+                        value="pix"
+                        id="pix"
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor="pix"
+                        className="flex flex-col items-center justify-center rounded-lg border-2 border-border p-4 cursor-pointer hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        data-testid="payment-method-pix"
+                      >
+                        <QrCode className="w-8 h-8 mb-2 text-primary" />
+                        <span className="font-medium">PIX</span>
+                        <span className="text-xs text-muted-foreground">Aprovação imediata</span>
+                      </Label>
+                    </div>
+                    <div>
+                      <RadioGroupItem
+                        value="card"
+                        id="card"
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor="card"
+                        className="flex flex-col items-center justify-center rounded-lg border-2 border-border p-4 cursor-pointer hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        data-testid="payment-method-card"
+                      >
+                        <CreditCard className="w-8 h-8 mb-2 text-primary" />
+                        <span className="font-medium">Cartão</span>
+                        <span className="text-xs text-muted-foreground">Crédito ou Débito</span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  className="w-full btn-press h-12 text-lg"
+                  disabled={loading}
+                  data-testid="submit-payment-button"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5 mr-2" />
+                      Pagar R$ {plan.price.toFixed(2).replace('.', ',')}
+                    </>
+                  )}
+                </Button>
+
+                {/* Security Note */}
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <Lock className="w-4 h-4" />
+                  <span>Pagamento 100% seguro via Mercado Pago</span>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
