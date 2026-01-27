@@ -451,23 +451,24 @@ export default function PublicBookingPage() {
         {/* Step: Client Info */}
         {step === 'info' && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase">Seus Dados</h2>
+            <h2 className="font-heading text-2xl uppercase text-white">Seus Dados</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="clientName">Nome completo *</Label>
+                <Label htmlFor="clientName" className="text-white">Nome completo *</Label>
                 <Input
                   id="clientName"
                   placeholder="Seu nome"
                   value={booking.clientName}
                   onChange={(e) => setBooking({ ...booking, clientName: e.target.value })}
                   required
+                  className="bg-gray-800 border-gray-700 text-white"
                   data-testid="client-name-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientPhone">WhatsApp *</Label>
+                <Label htmlFor="clientPhone" className="text-white">WhatsApp *</Label>
                 <Input
                   id="clientPhone"
                   type="tel"
@@ -475,38 +476,40 @@ export default function PublicBookingPage() {
                   value={booking.clientPhone}
                   onChange={(e) => setBooking({ ...booking, clientPhone: e.target.value })}
                   required
+                  className="bg-gray-800 border-gray-700 text-white"
                   data-testid="client-phone-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientEmail">Email (opcional)</Label>
+                <Label htmlFor="clientEmail" className="text-white">Email (opcional)</Label>
                 <Input
                   id="clientEmail"
                   type="email"
                   placeholder="seu@email.com"
                   value={booking.clientEmail}
                   onChange={(e) => setBooking({ ...booking, clientEmail: e.target.value })}
+                  className="bg-gray-800 border-gray-700 text-white"
                   data-testid="client-email-input"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-400">
                   Receba confirmação e lembretes por email
                 </p>
               </div>
 
               {/* Summary */}
-              <Card className="border-border bg-secondary/30">
+              <Card className="border-gray-700 bg-gray-800/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Resumo do Agendamento</CardTitle>
+                  <CardTitle className="text-lg text-white">Resumo do Agendamento</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Serviço</span>
-                    <span>{booking.service?.name}</span>
+                    <span className="text-gray-400">Serviço</span>
+                    <span className="text-white">{booking.service?.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Data</span>
-                    <span>{booking.date && format(booking.date, "dd/MM/yyyy")}</span>
+                    <span className="text-gray-400">Data</span>
+                    <span className="text-white">{booking.date && format(booking.date, "dd/MM/yyyy")}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Horário</span>
