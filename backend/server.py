@@ -426,46 +426,59 @@ async def send_email_notification(to_email: str, subject: str, html_content: str
 
 async def check_and_send_reminders():
     """Background task to send reminders 30 minutes before appointments"""
-    now = datetime.now(timezone.utc)
-    reminder_time = now + timedelta(minutes=30)
-    
-    today = now.strftime("%Y-%m-%d")
-    target_time = reminder_time.strftime("%H:%M")
-    
-    # Find appointments that need reminders
-    appointments = await db.appointments.find({
-        "date": today,
-        "time": target_time,
-        "status": {"$in": ["pending", "confirmed"]},
-        "reminder_sent": {"$ne": True}
-    }, {"_id": 0}).to_list(100)
-    
-    for apt in appointments:
-        barbershop = await db.barbershops.find_one(
-            {"barbershop_id": apt["barbershop_id"]},
-            {"_id": 0}
-        )
-        service = await db.services.find_one(
-            {"service_id": apt["service_id"]},
-            {"_id": 0}
-        )
+    try:
+        now = datetime.now(timezone.utc)
+        # Check appointments in a 5-minute window around the 30-minute mark
+        # This ensures we don't miss appointments due to timing issues
+        reminder_start = now + timedelta(minutes=28)
+        reminder_end = now + timedelta(minutes=32)
         
-        if barbershop and service:
-            # Send WhatsApp reminder
-            await send_whatsapp_reminder(
-                phone=apt["client_phone"],
-                barbershop_name=barbershop["name"],
-                service_name=service["name"],
-                date=apt["date"],
-                time=apt["time"],
-                address=barbershop.get("address")
+        today = now.strftime("%Y-%m-%d")
+        start_time = reminder_start.strftime("%H:%M")
+        end_time = reminder_end.strftime("%H:%M")
+        
+        logger.info(f"Checking for reminders: date={today}, time_window={start_time}-{end_time}")
+        
+        # Find appointments that need reminders
+        appointments = await db.appointments.find({
+            "date": today,
+            "time": {"$gte": start_time, "$lte": end_time},
+            "status": {"$in": ["pending", "confirmed"]},
+            "reminder_sent": {"$ne": True}
+        }, {"_id": 0}).to_list(100)
+        
+        logger.info(f"Found {len(appointments)} appointments needing reminders")
+        
+        for apt in appointments:
+            barbershop = await db.barbershops.find_one(
+                {"barbershop_id": apt["barbershop_id"]},
+                {"_id": 0}
+            )
+            service = await db.services.find_one(
+                {"service_id": apt["service_id"]},
+                {"_id": 0}
             )
             
-            # Mark as sent
-            await db.appointments.update_one(
-                {"appointment_id": apt["appointment_id"]},
-                {"$set": {"reminder_sent": True}}
-            )
+            if barbershop and service:
+                # Send WhatsApp reminder
+                result = await send_whatsapp_reminder(
+                    phone=apt["client_phone"],
+                    barbershop_name=barbershop["name"],
+                    service_name=service["name"],
+                    date=apt["date"],
+                    time=apt["time"],
+                    address=barbershop.get("address")
+                )
+                
+                if result:
+                    # Mark as sent only if successful
+                    await db.appointments.update_one(
+                        {"appointment_id": apt["appointment_id"]},
+                        {"$set": {"reminder_sent": True, "reminder_sent_at": now.isoformat()}}
+                    )
+                    logger.info(f"Reminder sent for appointment {apt['appointment_id']}")
+    except Exception as e:
+        logger.error(f"Error in check_and_send_reminders: {str(e)}")
 
 async def check_expired_subscriptions():
     """Background task to check and mark expired subscriptions"""
