@@ -1713,6 +1713,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Start the scheduler for background jobs"""
+    # Run reminder check every 5 minutes
+    scheduler.add_job(
+        check_and_send_reminders,
+        IntervalTrigger(minutes=5),
+        id="check_reminders",
+        replace_existing=True
+    )
+    # Run subscription check every hour
+    scheduler.add_job(
+        check_expired_subscriptions,
+        IntervalTrigger(hours=1),
+        id="check_subscriptions",
+        replace_existing=True
+    )
+    scheduler.start()
+    logger.info("Scheduler started - reminders every 5 min, subscription check every hour")
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_event():
+    """Shutdown the scheduler and database connection"""
+    scheduler.shutdown()
     client.close()
+    logger.info("Scheduler and database connection closed")
