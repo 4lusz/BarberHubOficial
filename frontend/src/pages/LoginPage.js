@@ -22,11 +22,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const user = await login(formData.email, formData.password);
+      const { user, needs_payment } = await login(formData.email, formData.password);
       toast.success('Bem-vindo de volta!');
       
       if (user.role === 'barber') {
-        navigate(user.barbershop_id ? '/dashboard' : '/criar-barbearia');
+        if (needs_payment || !user.barbershop_id) {
+          navigate('/escolher-plano');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         navigate('/minha-area');
       }
@@ -39,7 +43,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + '/dashboard';
+    const redirectUrl = window.location.origin + '/escolher-plano';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
