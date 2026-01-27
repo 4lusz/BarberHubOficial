@@ -39,18 +39,10 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 # Mercado Pago Config
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 
-# WhatsApp Config - Support both Twilio and Evolution API
-WHATSAPP_PROVIDER = os.environ.get('WHATSAPP_PROVIDER', 'twilio')  # 'twilio' or 'evolution'
-
-# Twilio Config (WhatsApp Sandbox/Business)
+# WhatsApp Config - Twilio
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', 'whatsapp:+14155238886')
-
-# Evolution API Config (Production WhatsApp)
-EVOLUTION_API_URL = os.environ.get('EVOLUTION_API_URL', '')  # Ex: https://your-evolution-api.com
-EVOLUTION_API_KEY = os.environ.get('EVOLUTION_API_KEY', '')
-EVOLUTION_INSTANCE = os.environ.get('EVOLUTION_INSTANCE', 'barberhub')  # Instance name
 
 # Initialize Twilio client
 twilio_client = None
