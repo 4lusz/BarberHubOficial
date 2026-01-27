@@ -562,8 +562,8 @@ async def trigger_subscription_check(background_tasks: BackgroundTasks):
 @api_router.post("/tasks/test-whatsapp")
 async def test_whatsapp_notification(phone: str):
     """Test WhatsApp notification - for debugging"""
-    if not twilio_client:
-        return {"success": False, "error": "Twilio not configured"}
+    if not twilio_client and not (EVOLUTION_API_URL and EVOLUTION_API_KEY):
+        return {"success": False, "error": "No WhatsApp provider configured (Twilio or Evolution API)"}
     
     try:
         result = await send_whatsapp_reminder(
