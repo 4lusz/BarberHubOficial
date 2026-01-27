@@ -18,6 +18,7 @@ import {
   Check,
   Ban,
   BarChart3,
+  Crown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/horarios', label: 'Horários', icon: Clock },
   { href: '/bloqueios', label: 'Bloqueios', icon: Ban },
   { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+  { href: '/planos-clientes', label: 'Planos Clientes', icon: Crown },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
