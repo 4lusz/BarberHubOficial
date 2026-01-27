@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, Request, BackgroundTasks
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -15,6 +15,7 @@ import jwt
 from datetime import datetime, timezone, timedelta
 import httpx
 import resend
+from twilio.rest import Client as TwilioClient
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -35,6 +36,16 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 
 # Mercado Pago Config
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
+
+# Twilio Config (WhatsApp)
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', 'whatsapp:+14155238886')  # Sandbox number
+
+# Initialize Twilio client
+twilio_client = None
+if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+    twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 # Create the main app
 app = FastAPI(title="BarberHub API")
@@ -97,7 +108,6 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
-    barbershop_name: Optional[str] = None
     role: str = "barber"  # barber or client
 
 class UserLogin(BaseModel):
@@ -125,12 +135,16 @@ class BarbershopCreate(BaseModel):
     description: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class BarbershopUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     primary_color: Optional[str] = None
     background_color: Optional[str] = None
 
@@ -142,16 +156,18 @@ class Barbershop(BaseModel):
     description: Optional[str] = None
     address: Optional[str] = None
     phone: Optional[str] = None
-    primary_color: str = "#F59E0B"  # Amber default
-    background_color: str = "#09090B"  # Dark default
-    plan: str = "comum"  # comum or premium
-    plan_status: str = "trial"  # trial, active, expired, cancelled
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    primary_color: str = "#F59E0B"
+    background_color: str = "#09090B"
+    plan: str = "comum"
+    plan_status: str = "pending"  # pending, active, expired, cancelled
     plan_expires_at: Optional[datetime] = None
     created_at: datetime
 
 class ServiceCreate(BaseModel):
     name: str
-    duration: int  # minutes
+    duration: int
     price: float
     description: Optional[str] = None
 
@@ -178,9 +194,9 @@ class Professional(BaseModel):
     active: bool = True
 
 class BusinessHoursCreate(BaseModel):
-    day_of_week: int  # 0=Monday, 6=Sunday
-    start_time: str  # HH:MM
-    end_time: str  # HH:MM
+    day_of_week: int
+    start_time: str
+    end_time: str
     is_closed: bool = False
 
 class BusinessHours(BaseModel):
@@ -191,9 +207,9 @@ class BusinessHours(BaseModel):
     is_closed: bool = False
 
 class TimeBlockCreate(BaseModel):
-    date: str  # YYYY-MM-DD
-    start_time: str  # HH:MM
-    end_time: str  # HH:MM
+    date: str
+    start_time: str
+    end_time: str
     reason: Optional[str] = None
     professional_id: Optional[str] = None
 
@@ -210,8 +226,8 @@ class AppointmentCreate(BaseModel):
     barbershop_id: str
     service_id: str
     professional_id: Optional[str] = None
-    date: str  # YYYY-MM-DD
-    time: str  # HH:MM
+    date: str
+    time: str
     client_name: str
     client_phone: str
     client_email: Optional[str] = None
@@ -230,7 +246,8 @@ class Appointment(BaseModel):
     client_phone: str
     client_email: Optional[str] = None
     notes: Optional[str] = None
-    status: str = "pending"  # pending, confirmed, cancelled, completed
+    status: str = "pending"
+    reminder_sent: bool = False
     created_at: datetime
 
 class AppointmentUpdate(BaseModel):
@@ -240,11 +257,11 @@ class AppointmentUpdate(BaseModel):
     notes: Optional[str] = None
 
 class SubscriptionPayment(BaseModel):
-    plan_id: str  # comum or premium
-    payment_method: str  # pix or card
+    plan_id: str
+    payment_method: str
     customer_name: str
     customer_email: str
-    customer_document: str  # CPF
+    customer_document: str
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -290,7 +307,6 @@ def decode_jwt_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Token inválido")
 
 async def get_current_user(request: Request, credentials = Depends(security)) -> dict:
-    # Try cookie first
     session_token = request.cookies.get("session_token")
     if session_token:
         session = await db.user_sessions.find_one(
@@ -311,7 +327,6 @@ async def get_current_user(request: Request, credentials = Depends(security)) ->
                 if user:
                     return user
     
-    # Try Authorization header
     if credentials:
         token = credentials.credentials
         payload = decode_jwt_token(token)
@@ -337,6 +352,54 @@ def calculate_end_time(start_time: str, duration_minutes: int) -> str:
     end_minutes = total_minutes % 60
     return f"{end_hours:02d}:{end_minutes:02d}"
 
+def format_phone_for_whatsapp(phone: str) -> str:
+    """Format phone number for WhatsApp (E.164 format)"""
+    # Remove all non-digits
+    digits = ''.join(filter(str.isdigit, phone))
+    # Add Brazil country code if not present
+    if len(digits) == 11:  # Brazilian mobile with DDD
+        digits = '55' + digits
+    elif len(digits) == 10:  # Brazilian landline with DDD
+        digits = '55' + digits
+    return f"whatsapp:+{digits}"
+
+async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
+                                  date: str, time: str, address: str = None):
+    """Send WhatsApp reminder via Twilio"""
+    if not twilio_client:
+        logger.warning("Twilio not configured, skipping WhatsApp reminder")
+        return None
+    
+    try:
+        to_number = format_phone_for_whatsapp(phone)
+        
+        # Format message
+        message_body = f"""🔔 *Lembrete de Agendamento*
+
+Olá! Seu horário está chegando:
+
+📍 *{barbershop_name}*
+✂️ Serviço: {service_name}
+📅 Data: {date}
+⏰ Horário: {time}"""
+        
+        if address:
+            message_body += f"\n📌 Endereço: {address}"
+        
+        message_body += "\n\nTe esperamos! 💈"
+        
+        message = twilio_client.messages.create(
+            body=message_body,
+            from_=TWILIO_WHATSAPP_NUMBER,
+            to=to_number
+        )
+        
+        logger.info(f"WhatsApp reminder sent to {phone}: {message.sid}")
+        return message.sid
+    except Exception as e:
+        logger.error(f"Failed to send WhatsApp reminder: {str(e)}")
+        return None
+
 async def send_email_notification(to_email: str, subject: str, html_content: str):
     if not resend.api_key:
         logger.warning("RESEND_API_KEY not configured, skipping email")
@@ -356,12 +419,87 @@ async def send_email_notification(to_email: str, subject: str, html_content: str
         logger.error(f"Failed to send email: {str(e)}")
         return None
 
+async def check_and_send_reminders():
+    """Background task to send reminders 30 minutes before appointments"""
+    now = datetime.now(timezone.utc)
+    reminder_time = now + timedelta(minutes=30)
+    
+    today = now.strftime("%Y-%m-%d")
+    target_time = reminder_time.strftime("%H:%M")
+    
+    # Find appointments that need reminders
+    appointments = await db.appointments.find({
+        "date": today,
+        "time": target_time,
+        "status": {"$in": ["pending", "confirmed"]},
+        "reminder_sent": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    for apt in appointments:
+        barbershop = await db.barbershops.find_one(
+            {"barbershop_id": apt["barbershop_id"]},
+            {"_id": 0}
+        )
+        service = await db.services.find_one(
+            {"service_id": apt["service_id"]},
+            {"_id": 0}
+        )
+        
+        if barbershop and service:
+            # Send WhatsApp reminder
+            await send_whatsapp_reminder(
+                phone=apt["client_phone"],
+                barbershop_name=barbershop["name"],
+                service_name=service["name"],
+                date=apt["date"],
+                time=apt["time"],
+                address=barbershop.get("address")
+            )
+            
+            # Mark as sent
+            await db.appointments.update_one(
+                {"appointment_id": apt["appointment_id"]},
+                {"$set": {"reminder_sent": True}}
+            )
+
+async def check_expired_subscriptions():
+    """Background task to check and mark expired subscriptions"""
+    now = datetime.now(timezone.utc)
+    
+    # Find active subscriptions that have expired
+    expired = await db.barbershops.find({
+        "plan_status": "active",
+        "plan_expires_at": {"$lt": now.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    for barbershop in expired:
+        await db.barbershops.update_one(
+            {"barbershop_id": barbershop["barbershop_id"]},
+            {"$set": {"plan_status": "expired"}}
+        )
+        logger.info(f"Subscription expired for barbershop: {barbershop['barbershop_id']}")
+
 
 # ==================== ROOT ROUTE ====================
 
 @api_router.get("/")
 async def root():
     return {"message": "BarberHub API", "status": "ok"}
+
+
+# ==================== BACKGROUND TASKS ====================
+
+@api_router.post("/tasks/send-reminders")
+async def trigger_reminders(background_tasks: BackgroundTasks):
+    """Endpoint to trigger reminder sending (call this via cron job)"""
+    background_tasks.add_task(check_and_send_reminders)
+    return {"status": "Reminders check scheduled"}
+
+@api_router.post("/tasks/check-subscriptions")
+async def trigger_subscription_check(background_tasks: BackgroundTasks):
+    """Endpoint to check expired subscriptions (call this via cron job)"""
+    background_tasks.add_task(check_expired_subscriptions)
+    return {"status": "Subscription check scheduled"}
 
 
 # ==================== AUTH ROUTES ====================
@@ -390,71 +528,14 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user_doc)
     
-    # If barber, create barbershop with 7-day trial
-    barbershop = None
-    if user_data.role == "barber" and user_data.barbershop_name:
-        barbershop_id = generate_id("barb")
-        base_slug = generate_slug(user_data.barbershop_name)
-        slug = base_slug
-        
-        # Ensure unique slug
-        counter = 1
-        while await db.barbershops.find_one({"slug": slug}):
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-        
-        trial_expires = datetime.now(timezone.utc) + timedelta(days=7)
-        
-        barbershop_doc = {
-            "barbershop_id": barbershop_id,
-            "owner_id": user_id,
-            "name": user_data.barbershop_name,
-            "slug": slug,
-            "description": None,
-            "address": None,
-            "phone": None,
-            "primary_color": "#F59E0B",
-            "background_color": "#09090B",
-            "plan": "comum",
-            "plan_status": "trial",
-            "plan_expires_at": trial_expires.isoformat(),
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
-        await db.barbershops.insert_one(barbershop_doc)
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {"barbershop_id": barbershop_id}}
-        )
-        user_doc["barbershop_id"] = barbershop_id
-        
-        # Create default business hours (Mon-Sat 9-18)
-        default_hours = []
-        for day in range(6):  # Mon-Sat
-            default_hours.append({
-                "barbershop_id": barbershop_id,
-                "day_of_week": day,
-                "start_time": "09:00",
-                "end_time": "18:00",
-                "is_closed": False
-            })
-        default_hours.append({
-            "barbershop_id": barbershop_id,
-            "day_of_week": 6,  # Sunday
-            "start_time": "09:00",
-            "end_time": "18:00",
-            "is_closed": True
-        })
-        await db.business_hours.insert_many(default_hours)
-        
-        barbershop = {k: v for k, v in barbershop_doc.items() if k != "_id"}
-    
+    # DON'T create barbershop here - user needs to pay first
     token = create_jwt_token(user_id, user_data.email, user_data.role)
     
     return {
         "token": token,
         "user": {k: v for k, v in user_doc.items() if k not in ["_id", "password"]},
-        "barbershop": barbershop
+        "barbershop": None,
+        "needs_payment": True
     }
 
 @api_router.post("/auth/login")
@@ -468,18 +549,20 @@ async def login(credentials: UserLogin):
     
     token = create_jwt_token(user["user_id"], user["email"], user["role"])
     
+    # Check if user needs to complete payment
+    needs_payment = user["role"] == "barber" and not user.get("barbershop_id")
+    
     return {
         "token": token,
-        "user": {k: v for k, v in user.items() if k != "password"}
+        "user": {k: v for k, v in user.items() if k != "password"},
+        "needs_payment": needs_payment
     }
 
 @api_router.post("/auth/client/register")
 async def register_client(client_data: ClientRegister):
-    # Check if phone exists
     existing = await db.users.find_one({"phone": client_data.phone, "role": "client"}, {"_id": 0})
     if existing:
         if client_data.password:
-            # Update with password if provided
             hashed = hash_password(client_data.password)
             await db.users.update_one(
                 {"user_id": existing["user_id"]},
@@ -531,7 +614,6 @@ async def login_client(phone: str, password: str):
         "user": {k: v for k, v in user.items() if k != "password"}
     }
 
-# REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 @api_router.post("/auth/google-session")
 async def exchange_google_session(session_id: str, response: Response):
     async with httpx.AsyncClient() as client_http:
@@ -545,11 +627,9 @@ async def exchange_google_session(session_id: str, response: Response):
         
         google_data = resp.json()
     
-    # Check if user exists
     user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
     
     if not user:
-        # Create new user as barber
         user_id = generate_id("user")
         user = {
             "user_id": user_id,
@@ -565,7 +645,6 @@ async def exchange_google_session(session_id: str, response: Response):
         await db.users.insert_one(user)
     else:
         user_id = user["user_id"]
-        # Update picture if changed
         if google_data.get("picture") and user.get("picture") != google_data["picture"]:
             await db.users.update_one(
                 {"user_id": user_id},
@@ -573,7 +652,6 @@ async def exchange_google_session(session_id: str, response: Response):
             )
             user["picture"] = google_data["picture"]
     
-    # Store session
     session_token = google_data["session_token"]
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     
@@ -588,7 +666,6 @@ async def exchange_google_session(session_id: str, response: Response):
         upsert=True
     )
     
-    # Set cookie
     response.set_cookie(
         key="session_token",
         value=session_token,
@@ -599,9 +676,12 @@ async def exchange_google_session(session_id: str, response: Response):
         max_age=7*24*60*60
     )
     
+    needs_payment = user["role"] == "barber" and not user.get("barbershop_id")
+    
     return {
         "user": {k: v for k, v in user.items() if k not in ["_id", "password"]},
-        "token": create_jwt_token(user_id, user["email"], user["role"])
+        "token": create_jwt_token(user_id, user["email"], user["role"]),
+        "needs_payment": needs_payment
     }
 
 @api_router.get("/auth/me")
@@ -623,52 +703,45 @@ async def get_plans():
 
 @api_router.post("/subscription/create")
 async def create_subscription(data: SubscriptionPayment, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+    if current_user["role"] != "barber":
         raise HTTPException(status_code=403, detail="Acesso negado")
     
     plan = SUBSCRIPTION_PLANS.get(data.plan_id)
     if not plan:
         raise HTTPException(status_code=400, detail="Plano não encontrado")
     
-    barbershop = await db.barbershops.find_one(
-        {"barbershop_id": current_user["barbershop_id"]},
-        {"_id": 0}
-    )
-    
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    # Check if user already has a barbershop
+    if current_user.get("barbershop_id"):
+        barbershop = await db.barbershops.find_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"_id": 0}
+        )
+        if barbershop:
+            # Update existing subscription
+            expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+            await db.barbershops.update_one(
+                {"barbershop_id": current_user["barbershop_id"]},
+                {"$set": {
+                    "plan": data.plan_id,
+                    "plan_status": "active",
+                    "plan_expires_at": expires_at.isoformat()
+                }}
+            )
+            return {
+                "success": True,
+                "message": "Assinatura renovada com sucesso!",
+                "plan": plan,
+                "expires_at": expires_at.isoformat()
+            }
     
     # Create payment preference with Mercado Pago
     if not MERCADOPAGO_ACCESS_TOKEN:
-        # For demo purposes, simulate payment success
-        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
-        await db.barbershops.update_one(
-            {"barbershop_id": current_user["barbershop_id"]},
-            {"$set": {
-                "plan": data.plan_id,
-                "plan_status": "active",
-                "plan_expires_at": expires_at.isoformat()
-            }}
-        )
-        
-        # Log subscription
-        subscription_doc = {
-            "subscription_id": generate_id("sub"),
-            "barbershop_id": current_user["barbershop_id"],
-            "plan_id": data.plan_id,
-            "amount": plan["price"],
-            "payment_method": data.payment_method,
-            "status": "active",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": expires_at.isoformat()
-        }
-        await db.subscriptions.insert_one(subscription_doc)
-        
+        # Demo mode - simulate payment success
         return {
             "success": True,
-            "message": "Assinatura ativada com sucesso! (Modo demonstração - Mercado Pago não configurado)",
-            "plan": plan,
-            "expires_at": expires_at.isoformat()
+            "demo_mode": True,
+            "message": "Modo demonstração - configure MERCADOPAGO_ACCESS_TOKEN para pagamentos reais",
+            "plan": plan
         }
     
     # Real Mercado Pago integration
@@ -691,12 +764,12 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
                 }
             },
             "back_urls": {
-                "success": f"{os.environ.get('FRONTEND_URL', '')}/assinatura/sucesso",
-                "failure": f"{os.environ.get('FRONTEND_URL', '')}/assinatura/erro",
-                "pending": f"{os.environ.get('FRONTEND_URL', '')}/assinatura/pendente"
+                "success": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/sucesso",
+                "failure": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/erro",
+                "pending": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/pendente"
             },
             "auto_return": "approved",
-            "external_reference": f"{current_user['barbershop_id']}_{data.plan_id}_{datetime.now(timezone.utc).timestamp()}"
+            "external_reference": f"{current_user['user_id']}_{data.plan_id}_{datetime.now(timezone.utc).timestamp()}"
         }
         
         async with httpx.AsyncClient() as client_http:
@@ -732,7 +805,6 @@ async def mercadopago_webhook(request: Request):
         if data.get("type") == "payment":
             payment_id = data.get("data", {}).get("id")
             
-            # Get payment details from Mercado Pago
             async with httpx.AsyncClient() as client_http:
                 resp = await client_http.get(
                     f"https://api.mercadopago.com/v1/payments/{payment_id}",
@@ -747,18 +819,34 @@ async def mercadopago_webhook(request: Request):
                     if status == "approved" and external_ref:
                         parts = external_ref.split("_")
                         if len(parts) >= 2:
-                            barbershop_id = parts[0]
+                            user_id = parts[0]
                             plan_id = parts[1]
                             
-                            expires_at = datetime.now(timezone.utc) + timedelta(days=30)
-                            await db.barbershops.update_one(
-                                {"barbershop_id": barbershop_id},
-                                {"$set": {
-                                    "plan": plan_id,
-                                    "plan_status": "active",
-                                    "plan_expires_at": expires_at.isoformat()
-                                }}
-                            )
+                            # Get user
+                            user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+                            if user and user.get("barbershop_id"):
+                                # Activate/renew subscription
+                                expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+                                await db.barbershops.update_one(
+                                    {"barbershop_id": user["barbershop_id"]},
+                                    {"$set": {
+                                        "plan": plan_id,
+                                        "plan_status": "active",
+                                        "plan_expires_at": expires_at.isoformat()
+                                    }}
+                                )
+                                
+                                # Log payment
+                                await db.payments.insert_one({
+                                    "payment_id": generate_id("pay"),
+                                    "barbershop_id": user["barbershop_id"],
+                                    "user_id": user_id,
+                                    "plan_id": plan_id,
+                                    "amount": payment_data.get("transaction_amount"),
+                                    "mp_payment_id": payment_id,
+                                    "status": "approved",
+                                    "created_at": datetime.now(timezone.utc).isoformat()
+                                })
         
         return Response(status_code=200)
     except Exception as e:
@@ -799,8 +887,6 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
         slug = f"{base_slug}-{counter}"
         counter += 1
     
-    trial_expires = datetime.now(timezone.utc) + timedelta(days=7)
-    
     barbershop_doc = {
         "barbershop_id": barbershop_id,
         "owner_id": current_user["user_id"],
@@ -809,11 +895,13 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
         "description": data.description,
         "address": data.address,
         "phone": data.phone,
+        "latitude": data.latitude,
+        "longitude": data.longitude,
         "primary_color": "#F59E0B",
         "background_color": "#09090B",
         "plan": "comum",
-        "plan_status": "trial",
-        "plan_expires_at": trial_expires.isoformat(),
+        "plan_status": "pending",  # Pending until payment
+        "plan_expires_at": None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -844,6 +932,34 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
     
     return {k: v for k, v in barbershop_doc.items() if k != "_id"}
 
+@api_router.post("/barbershops/activate")
+async def activate_barbershop(plan_id: str, current_user: dict = Depends(get_current_user)):
+    """Activate barbershop after payment (demo mode)"""
+    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+    
+    await db.barbershops.update_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"$set": {
+            "plan": plan_id,
+            "plan_status": "active",
+            "plan_expires_at": expires_at.isoformat()
+        }}
+    )
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    return {
+        "success": True,
+        "barbershop": barbershop,
+        "message": "Barbearia ativada com sucesso!"
+    }
+
 @api_router.put("/barbershops")
 async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
@@ -858,6 +974,10 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
         update_data["address"] = data.address
     if data.phone is not None:
         update_data["phone"] = data.phone
+    if data.latitude is not None:
+        update_data["latitude"] = data.latitude
+    if data.longitude is not None:
+        update_data["longitude"] = data.longitude
     if data.primary_color is not None:
         update_data["primary_color"] = data.primary_color
     if data.background_color is not None:
@@ -880,6 +1000,10 @@ async def get_public_barbershop(slug: str):
     barbershop = await db.barbershops.find_one({"slug": slug}, {"_id": 0})
     if not barbershop:
         raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Check if subscription is active
+    if barbershop.get("plan_status") not in ["active", "pending"]:
+        raise HTTPException(status_code=403, detail="Barbearia temporariamente indisponível")
     
     services = await db.services.find(
         {"barbershop_id": barbershop["barbershop_id"], "active": True},
@@ -1054,7 +1178,6 @@ async def update_business_hours(hours: List[BusinessHoursCreate], current_user: 
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
-    # Delete existing and insert new
     await db.business_hours.delete_many({"barbershop_id": current_user["barbershop_id"]})
     
     docs = []
@@ -1070,7 +1193,6 @@ async def update_business_hours(hours: List[BusinessHoursCreate], current_user: 
     if docs:
         await db.business_hours.insert_many(docs)
     
-    # Return the updated hours
     updated_hours = await db.business_hours.find(
         {"barbershop_id": current_user["barbershop_id"]},
         {"_id": 0}
@@ -1145,7 +1267,6 @@ async def get_appointments(
     
     appointments = await db.appointments.find(query, {"_id": 0}).sort("time", 1).to_list(1000)
     
-    # Enrich with service and professional names
     for apt in appointments:
         service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
         if service:
@@ -1170,12 +1291,14 @@ async def get_client_appointments(current_user: dict = Depends(get_current_user)
         {"_id": 0}
     ).sort([("date", -1), ("time", -1)]).to_list(100)
     
-    # Enrich with barbershop and service info
     for apt in appointments:
         barbershop = await db.barbershops.find_one({"barbershop_id": apt["barbershop_id"]}, {"_id": 0})
         if barbershop:
             apt["barbershop_name"] = barbershop["name"]
             apt["barbershop_slug"] = barbershop["slug"]
+            apt["barbershop_address"] = barbershop.get("address")
+            apt["barbershop_latitude"] = barbershop.get("latitude")
+            apt["barbershop_longitude"] = barbershop.get("longitude")
         
         service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
         if service:
@@ -1190,14 +1313,12 @@ async def get_availability(
     service_id: str,
     professional_id: Optional[str] = None
 ):
-    # Get service duration
     service = await db.services.find_one({"service_id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     
     duration = service["duration"]
     
-    # Get business hours for the day
     date_obj = datetime.strptime(date, "%Y-%m-%d")
     day_of_week = date_obj.weekday()
     
@@ -1209,37 +1330,33 @@ async def get_availability(
     if not business_hours or business_hours.get("is_closed"):
         return {"available_slots": [], "message": "Fechado neste dia"}
     
-    # Get existing appointments for the day
     query = {"barbershop_id": barbershop_id, "date": date, "status": {"$ne": "cancelled"}}
     if professional_id:
         query["professional_id"] = professional_id
     
     appointments = await db.appointments.find(query, {"_id": 0}).to_list(100)
     
-    # Get time blocks
     block_query = {"barbershop_id": barbershop_id, "date": date}
     if professional_id:
         block_query["$or"] = [{"professional_id": professional_id}, {"professional_id": None}]
     
     blocks = await db.time_blocks.find(block_query, {"_id": 0}).to_list(100)
     
-    # Generate available slots
     start_time = business_hours["start_time"]
     end_time = business_hours["end_time"]
     
     start_minutes = int(start_time.split(":")[0]) * 60 + int(start_time.split(":")[1])
     end_minutes = int(end_time.split(":")[0]) * 60 + int(end_time.split(":")[1])
     
-    # Check if date is today and filter past times
     today = datetime.now(timezone.utc).date()
     is_today = date_obj.date() == today
     current_minutes = 0
     if is_today:
         now = datetime.now(timezone.utc)
-        current_minutes = now.hour * 60 + now.minute + 30  # Add 30 min buffer
+        current_minutes = now.hour * 60 + now.minute + 30
     
     available_slots = []
-    slot_interval = 30  # 30 minute intervals
+    slot_interval = 30
     
     current_slot = start_minutes
     while current_slot + duration <= end_minutes:
@@ -1247,12 +1364,10 @@ async def get_availability(
         slot_end = current_slot + duration
         slot_end_time = f"{slot_end // 60:02d}:{slot_end % 60:02d}"
         
-        # Skip if in the past
         if is_today and current_slot < current_minutes:
             current_slot += slot_interval
             continue
         
-        # Check conflicts with appointments
         is_available = True
         for apt in appointments:
             apt_start = int(apt["time"].split(":")[0]) * 60 + int(apt["time"].split(":")[1])
@@ -1262,7 +1377,6 @@ async def get_availability(
                 is_available = False
                 break
         
-        # Check conflicts with blocks
         if is_available:
             for block in blocks:
                 block_start = int(block["start_time"].split(":")[0]) * 60 + int(block["start_time"].split(":")[1])
@@ -1284,15 +1398,12 @@ async def get_availability(
 
 @api_router.post("/appointments")
 async def create_appointment(data: AppointmentCreate, current_user: dict = Depends(get_optional_user)):
-    # Get service
     service = await db.services.find_one({"service_id": data.service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado")
     
-    # Calculate end time
     end_time = calculate_end_time(data.time, service["duration"])
     
-    # Check availability
     availability = await get_availability(
         data.barbershop_id, data.date, data.service_id, data.professional_id
     )
@@ -1316,14 +1427,24 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
         "client_email": data.client_email,
         "notes": data.notes,
         "status": "pending",
+        "reminder_sent": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.appointments.insert_one(apt_doc)
     
-    # Send email notification
+    # Get barbershop for response and notifications
     barbershop = await db.barbershops.find_one({"barbershop_id": data.barbershop_id}, {"_id": 0})
+    
+    # Send email notification
     if data.client_email and barbershop:
+        address_html = ""
+        if barbershop.get("address"):
+            address_html = f'<p style="color: #fff; margin: 5px 0;"><strong>Endereço:</strong> {barbershop["address"]}</p>'
+            if barbershop.get("latitude") and barbershop.get("longitude"):
+                maps_url = f"https://www.google.com/maps?q={barbershop['latitude']},{barbershop['longitude']}"
+                address_html += f'<p style="margin: 5px 0;"><a href="{maps_url}" style="color: #F59E0B;">Ver no Google Maps</a></p>'
+        
         html_content = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #F59E0B;">Agendamento Confirmado!</h2>
@@ -1334,8 +1455,10 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
                 <p style="color: #fff; margin: 5px 0;"><strong>Data:</strong> {data.date}</p>
                 <p style="color: #fff; margin: 5px 0;"><strong>Horário:</strong> {data.time}</p>
                 <p style="color: #fff; margin: 5px 0;"><strong>Valor:</strong> R$ {service['price']:.2f}</p>
+                {address_html}
             </div>
             <p style="color: #666;">Obrigado por escolher a {barbershop['name']}!</p>
+            <p style="color: #666; font-size: 12px;">Você receberá um lembrete por WhatsApp 30 minutos antes do seu horário.</p>
         </div>
         """
         await send_email_notification(
@@ -1344,7 +1467,16 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
             html_content
         )
     
-    return {k: v for k, v in apt_doc.items() if k != "_id"}
+    # Return appointment with barbershop location
+    apt_response = {k: v for k, v in apt_doc.items() if k != "_id"}
+    if barbershop:
+        apt_response["barbershop_name"] = barbershop["name"]
+        apt_response["barbershop_address"] = barbershop.get("address")
+        apt_response["barbershop_latitude"] = barbershop.get("latitude")
+        apt_response["barbershop_longitude"] = barbershop.get("longitude")
+        apt_response["barbershop_phone"] = barbershop.get("phone")
+    
+    return apt_response
 
 @api_router.put("/appointments/{appointment_id}")
 async def update_appointment(
@@ -1356,7 +1488,6 @@ async def update_appointment(
     if not apt:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
     
-    # Check permissions
     is_owner = current_user.get("barbershop_id") == apt["barbershop_id"]
     is_client = current_user["user_id"] == apt.get("client_id")
     
@@ -1383,7 +1514,6 @@ async def update_appointment(
     
     updated = await db.appointments.find_one({"appointment_id": appointment_id}, {"_id": 0})
     
-    # Send email on status change
     if data.status and apt.get("client_email"):
         barbershop = await db.barbershops.find_one({"barbershop_id": apt["barbershop_id"]}, {"_id": 0})
         status_text = {
@@ -1442,20 +1572,17 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     barbershop_id = current_user["barbershop_id"]
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
-    # Today's appointments
     today_appointments = await db.appointments.count_documents({
         "barbershop_id": barbershop_id,
         "date": today,
         "status": {"$ne": "cancelled"}
     })
     
-    # Pending appointments
     pending = await db.appointments.count_documents({
         "barbershop_id": barbershop_id,
         "status": "pending"
     })
     
-    # This week revenue (completed appointments)
     week_start = (datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())).strftime("%Y-%m-%d")
     completed_this_week = await db.appointments.find({
         "barbershop_id": barbershop_id,
@@ -1469,7 +1596,6 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         if service:
             week_revenue += service["price"]
     
-    # Total clients
     total_clients = len(set([
         apt["client_phone"] 
         async for apt in db.appointments.find({"barbershop_id": barbershop_id}, {"client_phone": 1})
@@ -1494,24 +1620,21 @@ async def get_revenue_report(
     if not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
-    # Check if user has premium plan
     barbershop = await db.barbershops.find_one(
         {"barbershop_id": current_user["barbershop_id"]},
         {"_id": 0}
     )
     
-    if barbershop.get("plan") != "premium" and barbershop.get("plan_status") != "trial":
+    if barbershop.get("plan") != "premium":
         raise HTTPException(status_code=403, detail="Recurso disponível apenas no plano Premium")
     
     barbershop_id = current_user["barbershop_id"]
     
-    # Default to last 30 days
     if not end_date:
         end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if not start_date:
         start_date = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
     
-    # Get completed appointments
     appointments = await db.appointments.find({
         "barbershop_id": barbershop_id,
         "date": {"$gte": start_date, "$lte": end_date},
@@ -1529,14 +1652,12 @@ async def get_revenue_report(
             price = service["price"]
             total_revenue += price
             
-            # By service
             service_name = service["name"]
             if service_name not in revenue_by_service:
                 revenue_by_service[service_name] = {"count": 0, "revenue": 0}
             revenue_by_service[service_name]["count"] += 1
             revenue_by_service[service_name]["revenue"] += price
             
-            # By professional
             if apt.get("professional_id"):
                 prof = await db.professionals.find_one({"professional_id": apt["professional_id"]}, {"_id": 0})
                 if prof:
@@ -1546,7 +1667,6 @@ async def get_revenue_report(
                     revenue_by_professional[prof_name]["count"] += 1
                     revenue_by_professional[prof_name]["revenue"] += price
             
-            # By hour
             hour = apt["time"].split(":")[0]
             if hour not in revenue_by_hour:
                 revenue_by_hour[hour] = {"count": 0, "revenue": 0}
