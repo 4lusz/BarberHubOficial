@@ -236,19 +236,37 @@ export default function PublicBookingPage() {
 
   const { barbershop, services, professionals, business_hours } = data;
 
+  // Custom styles based on barbershop colors
+  const customStyles = {
+    '--custom-primary': primaryColor,
+    '--custom-bg': bgColor,
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen" 
+      style={{ 
+        backgroundColor: bgColor,
+        ...customStyles 
+      }}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-white/10">
+      <header 
+        className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-md"
+        style={{ backgroundColor: `${bgColor}dd` }}
+      >
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Scissors className="w-5 h-5 text-primary" />
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: `${primaryColor}20` }}
+            >
+              <Scissors className="w-5 h-5" style={{ color: primaryColor }} />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-xl uppercase">{barbershop.name}</h1>
+              <h1 className="font-heading font-bold text-xl uppercase text-white">{barbershop.name}</h1>
               {barbershop.address && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-gray-400 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   {barbershop.address}
                 </p>
@@ -264,11 +282,12 @@ export default function PublicBookingPage() {
           {['service', 'datetime', 'info'].map((s, i) => (
             <div
               key={s}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                steps.indexOf(step) >= steps.indexOf(s === 'datetime' ? 'professional' : s)
-                  ? 'bg-primary'
-                  : 'bg-secondary'
-              }`}
+              className="w-3 h-3 rounded-full transition-colors"
+              style={{
+                backgroundColor: steps.indexOf(step) >= steps.indexOf(s === 'datetime' ? 'professional' : s)
+                  ? primaryColor
+                  : '#374151'
+              }}
             />
           ))}
         </div>
@@ -278,7 +297,7 @@ export default function PublicBookingPage() {
           <Button
             variant="ghost"
             onClick={goBack}
-            className="mb-4"
+            className="mb-4 text-white hover:bg-white/10"
             data-testid="back-button"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
