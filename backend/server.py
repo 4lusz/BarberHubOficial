@@ -503,14 +503,16 @@ async def check_and_send_reminders():
             )
             
             if barbershop and service:
-                # Send WhatsApp reminder
+                # Send WhatsApp reminder with barbershop location
                 result = await send_whatsapp_reminder(
                     phone=apt["client_phone"],
                     barbershop_name=barbershop["name"],
                     service_name=service["name"],
                     date=apt["date"],
                     time=apt["time"],
-                    address=barbershop.get("address")
+                    address=barbershop.get("address"),
+                    latitude=barbershop.get("latitude"),
+                    longitude=barbershop.get("longitude")
                 )
                 
                 if result:
