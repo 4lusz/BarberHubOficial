@@ -433,9 +433,15 @@ export default function PublicBookingPage() {
                     {availableSlots.map((slot) => (
                       <Button
                         key={slot.time}
-                        variant={booking.time === slot.time ? 'default' : 'outline'}
+                        variant="outline"
                         onClick={() => handleTimeSelect(slot.time)}
-                        className="btn-press"
+                        className="btn-press border-gray-700 text-white hover:text-white"
+                        style={booking.time === slot.time ? { 
+                          backgroundColor: primaryColor, 
+                          borderColor: primaryColor 
+                        } : {
+                          backgroundColor: 'transparent'
+                        }}
                         data-testid={`time-slot-${slot.time}`}
                       >
                         {slot.time}
