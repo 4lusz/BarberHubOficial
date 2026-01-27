@@ -308,10 +308,10 @@ export default function PublicBookingPage() {
         {/* Step: Service Selection */}
         {step === 'service' && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase">Escolha o Serviço</h2>
+            <h2 className="font-heading text-2xl uppercase text-white">Escolha o Serviço</h2>
             {services.length === 0 ? (
-              <Card className="border-border">
-                <CardContent className="py-8 text-center text-muted-foreground">
+              <Card className="border-gray-700 bg-gray-800/50">
+                <CardContent className="py-8 text-center text-gray-400">
                   Nenhum serviço disponível no momento.
                 </CardContent>
               </Card>
@@ -320,21 +320,22 @@ export default function PublicBookingPage() {
                 {services.map((service) => (
                   <Card
                     key={service.service_id}
-                    className="border-border hover:border-primary/50 cursor-pointer transition-all"
+                    className="border-gray-700 bg-gray-800/50 hover:border-opacity-50 cursor-pointer transition-all"
+                    style={{ '--hover-border': primaryColor }}
                     onClick={() => handleServiceSelect(service)}
                     data-testid={`service-option-${service.service_id}`}
                   >
                     <CardContent className="py-4 flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-lg">{service.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                        <h3 className="font-medium text-lg text-white">{service.name}</h3>
+                        <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                           <span className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
                             {service.duration} min
                           </span>
                         </div>
                       </div>
-                      <span className="text-xl font-bold text-primary">
+                      <span className="text-xl font-bold" style={{ color: primaryColor }}>
                         {formatCurrency(service.price)}
                       </span>
                     </CardContent>
@@ -348,16 +349,16 @@ export default function PublicBookingPage() {
         {/* Step: Professional Selection */}
         {step === 'professional' && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase">Escolha o Profissional</h2>
+            <h2 className="font-heading text-2xl uppercase text-white">Escolha o Profissional</h2>
             <div className="grid gap-3">
               <Card
-                className="border-border hover:border-primary/50 cursor-pointer transition-all"
+                className="border-gray-700 bg-gray-800/50 hover:border-opacity-50 cursor-pointer transition-all"
                 onClick={() => handleProfessionalSelect(null)}
                 data-testid="professional-any"
               >
                 <CardContent className="py-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                    <User className="w-6 h-6 text-muted-foreground" />
+                  <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
+                    <User className="w-6 h-6 text-gray-400" />
                   </div>
                   <div>
                     <h3 className="font-medium">Sem preferência</h3>
