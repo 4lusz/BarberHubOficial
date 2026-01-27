@@ -763,14 +763,14 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
     if not plan:
         raise HTTPException(status_code=400, detail="Plano não encontrado")
     
-    # Check if user already has a barbershop
+    # Check if user already has an ACTIVE barbershop subscription
     if current_user.get("barbershop_id"):
         barbershop = await db.barbershops.find_one(
             {"barbershop_id": current_user["barbershop_id"]},
             {"_id": 0}
         )
-        if barbershop:
-            # Update existing subscription
+        if barbershop and barbershop.get("plan_status") == "active":
+            # Update existing active subscription (renewal)
             expires_at = datetime.now(timezone.utc) + timedelta(days=30)
             await db.barbershops.update_one(
                 {"barbershop_id": current_user["barbershop_id"]},
@@ -787,7 +787,7 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
                 "expires_at": expires_at.isoformat()
             }
     
-    # Create payment preference with Mercado Pago
+    # Create payment preference with Mercado Pago for new subscriptions or pending ones
     if not MERCADOPAGO_ACCESS_TOKEN:
         # Demo mode - simulate payment success
         return {
