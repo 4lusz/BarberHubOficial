@@ -2083,8 +2083,15 @@ async def startup_event():
         id="check_subscriptions",
         replace_existing=True
     )
+    # Run recurring billing check every 12 hours
+    scheduler.add_job(
+        process_recurring_billing,
+        IntervalTrigger(hours=12),
+        id="recurring_billing",
+        replace_existing=True
+    )
     scheduler.start()
-    logger.info("Scheduler started - reminders every 5 min, subscription check every hour")
+    logger.info("Scheduler started - reminders every 5 min, subscription check every hour, billing every 12h")
 
 @app.on_event("shutdown")
 async def shutdown_event():
