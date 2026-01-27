@@ -20,6 +20,7 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PublicBookingPage from './pages/PublicBookingPage';
 import ClientAreaPage from './pages/ClientAreaPage';
 import ReportsPage from './pages/ReportsPage';
+import ClientPlansPage from './pages/ClientPlansPage';
 
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
