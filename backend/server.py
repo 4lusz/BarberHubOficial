@@ -262,34 +262,20 @@ class SubscriptionPayment(BaseModel):
     customer_email: str
     customer_document: str
 
-# ==================== CLIENT PLANS (PREMIUM FEATURE) ====================
+# ==================== VIP CLIENTS (SIMPLIFIED) ====================
 
-class ClientPlanCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    price: float
-    duration_days: int = 30  # Default monthly
-    benefits: List[str] = []
-    included_services: List[str] = []  # Service IDs included
-    discount_percentage: Optional[float] = None  # Discount on other services
-    max_appointments: Optional[int] = None  # Max appointments per period
-
-class ClientPlanUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    price: Optional[float] = None
-    duration_days: Optional[int] = None
-    benefits: Optional[List[str]] = None
-    included_services: Optional[List[str]] = None
-    discount_percentage: Optional[float] = None
-    max_appointments: Optional[int] = None
-    active: Optional[bool] = None
-
-class ClientSubscriptionCreate(BaseModel):
-    client_plan_id: str
+class VipClientCreate(BaseModel):
     client_name: str
     client_phone: str
     client_email: Optional[str] = None
+    discount_percentage: float = 10.0  # Default 10% discount
+    notes: Optional[str] = None
+
+class VipClientUpdate(BaseModel):
+    client_name: Optional[str] = None
+    discount_percentage: Optional[float] = None
+    notes: Optional[str] = None
+    active: Optional[bool] = None
 
 
 # ==================== HELPER FUNCTIONS ====================
