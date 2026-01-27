@@ -1735,6 +1735,324 @@ async def get_revenue_report(
         "by_hour": revenue_by_hour
     }
 
+@api_router.get("/reports/daily")
+async def get_daily_report(
+    date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get daily report - available for all plans"""
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    barbershop_id = current_user["barbershop_id"]
+    
+    if not date:
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    appointments = await db.appointments.find({
+        "barbershop_id": barbershop_id,
+        "date": date
+    }, {"_id": 0}).to_list(100)
+    
+    total = len(appointments)
+    completed = len([a for a in appointments if a["status"] == "completed"])
+    cancelled = len([a for a in appointments if a["status"] == "cancelled"])
+    pending = len([a for a in appointments if a["status"] in ["pending", "confirmed"]])
+    
+    revenue = 0
+    for apt in [a for a in appointments if a["status"] == "completed"]:
+        service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
+        if service:
+            revenue += service["price"]
+    
+    return {
+        "date": date,
+        "total_appointments": total,
+        "completed": completed,
+        "cancelled": cancelled,
+        "pending": pending,
+        "revenue": revenue
+    }
+
+@api_router.get("/reports/weekly")
+async def get_weekly_report(current_user: dict = Depends(get_current_user)):
+    """Get weekly report with daily breakdown - Premium only"""
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if barbershop.get("plan") != "premium":
+        raise HTTPException(status_code=403, detail="Recurso disponível apenas no plano Premium")
+    
+    barbershop_id = current_user["barbershop_id"]
+    today = datetime.now(timezone.utc)
+    
+    # Get last 7 days
+    daily_data = []
+    total_revenue = 0
+    total_appointments = 0
+    
+    for i in range(7):
+        date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        appointments = await db.appointments.find({
+            "barbershop_id": barbershop_id,
+            "date": date,
+            "status": "completed"
+        }, {"_id": 0}).to_list(100)
+        
+        day_revenue = 0
+        for apt in appointments:
+            service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
+            if service:
+                day_revenue += service["price"]
+        
+        daily_data.append({
+            "date": date,
+            "appointments": len(appointments),
+            "revenue": day_revenue
+        })
+        
+        total_revenue += day_revenue
+        total_appointments += len(appointments)
+    
+    return {
+        "period": "last_7_days",
+        "total_revenue": total_revenue,
+        "total_appointments": total_appointments,
+        "average_daily_revenue": total_revenue / 7,
+        "daily_breakdown": list(reversed(daily_data))
+    }
+
+@api_router.get("/reports/clients")
+async def get_clients_report(current_user: dict = Depends(get_current_user)):
+    """Get clients report - Premium only"""
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if barbershop.get("plan") != "premium":
+        raise HTTPException(status_code=403, detail="Recurso disponível apenas no plano Premium")
+    
+    barbershop_id = current_user["barbershop_id"]
+    
+    # Get all appointments grouped by client
+    pipeline = [
+        {"$match": {"barbershop_id": barbershop_id, "status": "completed"}},
+        {"$group": {
+            "_id": "$client_phone",
+            "client_name": {"$last": "$client_name"},
+            "total_visits": {"$sum": 1},
+            "last_visit": {"$max": "$date"}
+        }},
+        {"$sort": {"total_visits": -1}},
+        {"$limit": 50}
+    ]
+    
+    clients = await db.appointments.aggregate(pipeline).to_list(50)
+    
+    # Calculate total revenue per client
+    for client in clients:
+        client_appointments = await db.appointments.find({
+            "barbershop_id": barbershop_id,
+            "client_phone": client["_id"],
+            "status": "completed"
+        }, {"_id": 0}).to_list(100)
+        
+        total_spent = 0
+        for apt in client_appointments:
+            service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
+            if service:
+                total_spent += service["price"]
+        
+        client["total_spent"] = total_spent
+        client["phone"] = client.pop("_id")
+    
+    return {
+        "total_unique_clients": len(clients),
+        "top_clients": clients
+    }
+
+
+# ==================== RECURRING BILLING ====================
+
+async def process_recurring_billing():
+    """Process recurring billing for expiring subscriptions"""
+    try:
+        now = datetime.now(timezone.utc)
+        # Find subscriptions expiring in the next 3 days
+        expiring_soon = now + timedelta(days=3)
+        
+        barbershops = await db.barbershops.find({
+            "plan_status": "active",
+            "plan_expires_at": {"$lte": expiring_soon.isoformat(), "$gt": now.isoformat()}
+        }, {"_id": 0}).to_list(100)
+        
+        logger.info(f"Found {len(barbershops)} subscriptions expiring soon")
+        
+        for barbershop in barbershops:
+            # Check if we already sent a renewal reminder
+            reminder_sent = await db.billing_reminders.find_one({
+                "barbershop_id": barbershop["barbershop_id"],
+                "expires_at": barbershop["plan_expires_at"]
+            })
+            
+            if not reminder_sent:
+                # Get owner info
+                owner = await db.users.find_one({"barbershop_id": barbershop["barbershop_id"]}, {"_id": 0})
+                
+                if owner and twilio_client:
+                    # Send WhatsApp reminder about renewal
+                    plan = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"))
+                    try:
+                        to_number = format_phone_for_whatsapp(owner.get("phone", ""))
+                        if to_number and len(to_number) > 15:
+                            message = twilio_client.messages.create(
+                                body=f"""⚠️ *Lembrete de Renovação*
+
+Olá! Sua assinatura do BarberHub ({plan['name']}) expira em breve.
+
+💰 Valor: R$ {plan['price']:.2f}/mês
+
+Para continuar recebendo agendamentos, renove sua assinatura acessando o painel.
+
+Obrigado por usar o BarberHub! 💈""",
+                                from_=TWILIO_WHATSAPP_NUMBER,
+                                to=to_number
+                            )
+                            logger.info(f"Renewal reminder sent to {barbershop['barbershop_id']}: {message.sid}")
+                    except Exception as e:
+                        logger.error(f"Failed to send renewal reminder: {str(e)}")
+                
+                # Mark reminder as sent
+                await db.billing_reminders.insert_one({
+                    "barbershop_id": barbershop["barbershop_id"],
+                    "expires_at": barbershop["plan_expires_at"],
+                    "sent_at": now.isoformat()
+                })
+    except Exception as e:
+        logger.error(f"Error in process_recurring_billing: {str(e)}")
+
+@api_router.post("/subscription/renew")
+async def renew_subscription(current_user: dict = Depends(get_current_user)):
+    """Create a renewal payment for existing subscription"""
+    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    plan_id = barbershop.get("plan", "comum")
+    plan = SUBSCRIPTION_PLANS.get(plan_id)
+    
+    if not MERCADOPAGO_ACCESS_TOKEN:
+        # Demo mode - just extend subscription
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+        await db.barbershops.update_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"$set": {
+                "plan_status": "active",
+                "plan_expires_at": expires_at.isoformat()
+            }}
+        )
+        return {
+            "success": True,
+            "demo_mode": True,
+            "message": "Assinatura renovada (modo demo)",
+            "expires_at": expires_at.isoformat()
+        }
+    
+    # Create Mercado Pago payment for renewal
+    try:
+        preference_data = {
+            "items": [{
+                "id": f"renewal_{plan_id}",
+                "title": f"Renovação - {plan['name']}",
+                "description": f"Renovação mensal - {plan['name']}",
+                "currency_id": "BRL",
+                "quantity": 1,
+                "unit_price": plan["price"]
+            }],
+            "payer": {
+                "email": current_user.get("email", "")
+            },
+            "back_urls": {
+                "success": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/sucesso",
+                "failure": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/erro",
+                "pending": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/pendente"
+            },
+            "auto_return": "approved",
+            "external_reference": f"{current_user['user_id']}_{plan_id}_renewal_{datetime.now(timezone.utc).timestamp()}"
+        }
+        
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.post(
+                "https://api.mercadopago.com/checkout/preferences",
+                json=preference_data,
+                headers={
+                    "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                    "Content-Type": "application/json"
+                }
+            )
+            resp.raise_for_status()
+            mp_response = resp.json()
+        
+        return {
+            "success": True,
+            "payment_url": mp_response.get("init_point"),
+            "preference_id": mp_response.get("id"),
+            "plan": plan
+        }
+    except Exception as e:
+        logger.error(f"Mercado Pago renewal error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao processar renovação")
+
+@api_router.get("/subscription/status")
+async def get_subscription_status(current_user: dict = Depends(get_current_user)):
+    """Get current subscription status"""
+    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    plan = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"))
+    expires_at = barbershop.get("plan_expires_at")
+    
+    days_remaining = None
+    if expires_at:
+        try:
+            exp_date = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            days_remaining = (exp_date - datetime.now(timezone.utc)).days
+        except:
+            pass
+    
+    return {
+        "plan": plan,
+        "plan_id": barbershop.get("plan"),
+        "status": barbershop.get("plan_status"),
+        "expires_at": expires_at,
+        "days_remaining": days_remaining,
+        "auto_renew": barbershop.get("auto_renew", False)
+    }
+
 
 # ==================== MAIN APP SETUP ====================
 
