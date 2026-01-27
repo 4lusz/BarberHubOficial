@@ -16,6 +16,7 @@ import AgendaPage from './pages/AgendaPage';
 import SettingsPage from './pages/SettingsPage';
 import SelectPlanPage from './pages/SelectPlanPage';
 import PaymentPage from './pages/PaymentPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PublicBookingPage from './pages/PublicBookingPage';
 import ClientAreaPage from './pages/ClientAreaPage';
 
