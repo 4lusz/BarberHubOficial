@@ -596,8 +596,6 @@ async def get_scheduler_status():
         "running": scheduler.running,
         "jobs": jobs,
         "twilio_configured": twilio_client is not None,
-        "evolution_api_configured": bool(EVOLUTION_API_URL and EVOLUTION_API_KEY),
-        "whatsapp_provider": WHATSAPP_PROVIDER,
         "mercadopago_configured": bool(MERCADOPAGO_ACCESS_TOKEN)
     }
 
