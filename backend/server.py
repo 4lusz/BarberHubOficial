@@ -1806,6 +1806,317 @@ async def get_revenue_report(
         "by_hour": revenue_by_hour
     }
 
+
+# ==================== CLIENT PLANS (PREMIUM FEATURE) ====================
+
+async def check_premium_access(current_user: dict):
+    """Check if user has premium plan"""
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop or barbershop.get("plan") != "premium":
+        raise HTTPException(status_code=403, detail="Recurso disponível apenas no plano Premium")
+    
+    return barbershop
+
+@api_router.get("/client-plans")
+async def list_client_plans(current_user: dict = Depends(get_current_user)):
+    """List all client plans for a barbershop (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    plans = await db.client_plans.find(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    ).to_list(100)
+    
+    return plans
+
+@api_router.post("/client-plans")
+async def create_client_plan(data: ClientPlanCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new client plan (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    plan_id = generate_id("cplan")
+    plan_doc = {
+        "plan_id": plan_id,
+        "barbershop_id": current_user["barbershop_id"],
+        "name": data.name,
+        "description": data.description,
+        "price": data.price,
+        "duration_days": data.duration_days,
+        "benefits": data.benefits,
+        "included_services": data.included_services,
+        "discount_percentage": data.discount_percentage,
+        "max_appointments": data.max_appointments,
+        "active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.client_plans.insert_one(plan_doc)
+    del plan_doc["_id"]
+    
+    return plan_doc
+
+@api_router.get("/client-plans/{plan_id}")
+async def get_client_plan(plan_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a specific client plan"""
+    barbershop = await check_premium_access(current_user)
+    
+    plan = await db.client_plans.find_one(
+        {"plan_id": plan_id, "barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
+    
+    return plan
+
+@api_router.put("/client-plans/{plan_id}")
+async def update_client_plan(plan_id: str, data: ClientPlanUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a client plan (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    plan = await db.client_plans.find_one(
+        {"plan_id": plan_id, "barbershop_id": current_user["barbershop_id"]}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.client_plans.update_one(
+        {"plan_id": plan_id},
+        {"$set": update_data}
+    )
+    
+    updated_plan = await db.client_plans.find_one({"plan_id": plan_id}, {"_id": 0})
+    return updated_plan
+
+@api_router.delete("/client-plans/{plan_id}")
+async def delete_client_plan(plan_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a client plan (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    result = await db.client_plans.delete_one(
+        {"plan_id": plan_id, "barbershop_id": current_user["barbershop_id"]}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
+    
+    return {"success": True, "message": "Plano excluído com sucesso"}
+
+# ==================== CLIENT SUBSCRIPTIONS (PREMIUM FEATURE) ====================
+
+@api_router.get("/client-subscriptions")
+async def list_client_subscriptions(
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """List all client subscriptions for a barbershop (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    query = {"barbershop_id": current_user["barbershop_id"]}
+    if status:
+        query["status"] = status
+    
+    subscriptions = await db.client_subscriptions.find(query, {"_id": 0}).to_list(500)
+    
+    # Enrich with plan info
+    for sub in subscriptions:
+        plan = await db.client_plans.find_one({"plan_id": sub["client_plan_id"]}, {"_id": 0})
+        if plan:
+            sub["plan_name"] = plan["name"]
+            sub["plan_price"] = plan["price"]
+    
+    return subscriptions
+
+@api_router.post("/client-subscriptions")
+async def create_client_subscription(data: ClientSubscriptionCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new client subscription (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    # Check if plan exists
+    plan = await db.client_plans.find_one(
+        {"plan_id": data.client_plan_id, "barbershop_id": current_user["barbershop_id"], "active": True},
+        {"_id": 0}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado ou inativo")
+    
+    subscription_id = generate_id("csub")
+    start_date = datetime.now(timezone.utc)
+    end_date = start_date + timedelta(days=plan["duration_days"])
+    
+    subscription_doc = {
+        "subscription_id": subscription_id,
+        "barbershop_id": current_user["barbershop_id"],
+        "client_plan_id": data.client_plan_id,
+        "client_name": data.client_name,
+        "client_phone": data.client_phone,
+        "client_email": data.client_email,
+        "status": "active",
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "appointments_used": 0,
+        "created_at": start_date.isoformat()
+    }
+    
+    await db.client_subscriptions.insert_one(subscription_doc)
+    del subscription_doc["_id"]
+    
+    # Send WhatsApp notification to client
+    message = f"""🎉 *Bem-vindo ao {plan['name']}!*
+
+Olá {data.client_name}!
+
+Sua assinatura na *{barbershop['name']}* foi ativada com sucesso!
+
+📋 Plano: {plan['name']}
+💰 Valor: R$ {plan['price']:.2f}
+📅 Válido até: {end_date.strftime('%d/%m/%Y')}
+
+Aproveite seus benefícios! 💈"""
+    
+    await send_whatsapp_message(data.client_phone, message)
+    
+    return subscription_doc
+
+@api_router.get("/client-subscriptions/{subscription_id}")
+async def get_client_subscription(subscription_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a specific client subscription"""
+    barbershop = await check_premium_access(current_user)
+    
+    subscription = await db.client_subscriptions.find_one(
+        {"subscription_id": subscription_id, "barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Assinatura não encontrada")
+    
+    # Get plan info
+    plan = await db.client_plans.find_one({"plan_id": subscription["client_plan_id"]}, {"_id": 0})
+    if plan:
+        subscription["plan"] = plan
+    
+    return subscription
+
+@api_router.post("/client-subscriptions/{subscription_id}/renew")
+async def renew_client_subscription(subscription_id: str, current_user: dict = Depends(get_current_user)):
+    """Renew a client subscription (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    subscription = await db.client_subscriptions.find_one(
+        {"subscription_id": subscription_id, "barbershop_id": current_user["barbershop_id"]}
+    )
+    
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Assinatura não encontrada")
+    
+    plan = await db.client_plans.find_one({"plan_id": subscription["client_plan_id"]}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plano não encontrado")
+    
+    # Calculate new end date from current end date or now if expired
+    current_end = datetime.fromisoformat(subscription["end_date"].replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    new_start = max(current_end, now)
+    new_end = new_start + timedelta(days=plan["duration_days"])
+    
+    await db.client_subscriptions.update_one(
+        {"subscription_id": subscription_id},
+        {"$set": {
+            "status": "active",
+            "end_date": new_end.isoformat(),
+            "appointments_used": 0,
+            "renewed_at": now.isoformat()
+        }}
+    )
+    
+    # Send WhatsApp notification
+    message = f"""✅ *Assinatura Renovada!*
+
+Olá {subscription['client_name']}!
+
+Sua assinatura do *{plan['name']}* foi renovada com sucesso!
+
+📅 Nova validade: {new_end.strftime('%d/%m/%Y')}
+
+Continue aproveitando seus benefícios! 💈"""
+    
+    await send_whatsapp_message(subscription["client_phone"], message)
+    
+    updated = await db.client_subscriptions.find_one({"subscription_id": subscription_id}, {"_id": 0})
+    return updated
+
+@api_router.post("/client-subscriptions/{subscription_id}/cancel")
+async def cancel_client_subscription(subscription_id: str, current_user: dict = Depends(get_current_user)):
+    """Cancel a client subscription (Premium only)"""
+    barbershop = await check_premium_access(current_user)
+    
+    subscription = await db.client_subscriptions.find_one(
+        {"subscription_id": subscription_id, "barbershop_id": current_user["barbershop_id"]}
+    )
+    
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Assinatura não encontrada")
+    
+    await db.client_subscriptions.update_one(
+        {"subscription_id": subscription_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": "Assinatura cancelada com sucesso"}
+
+@api_router.get("/client-subscriptions/check/{phone}")
+async def check_client_subscription_by_phone(phone: str, barbershop_id: str):
+    """Check if a client has an active subscription (public endpoint for booking)"""
+    # Clean phone number
+    clean_phone = ''.join(filter(str.isdigit, phone))
+    
+    subscription = await db.client_subscriptions.find_one({
+        "barbershop_id": barbershop_id,
+        "client_phone": {"$regex": clean_phone},
+        "status": "active"
+    }, {"_id": 0})
+    
+    if not subscription:
+        return {"has_subscription": False}
+    
+    # Check if expired
+    end_date = datetime.fromisoformat(subscription["end_date"].replace("Z", "+00:00"))
+    if end_date < datetime.now(timezone.utc):
+        await db.client_subscriptions.update_one(
+            {"subscription_id": subscription["subscription_id"]},
+            {"$set": {"status": "expired"}}
+        )
+        return {"has_subscription": False}
+    
+    # Get plan info
+    plan = await db.client_plans.find_one({"plan_id": subscription["client_plan_id"]}, {"_id": 0})
+    
+    return {
+        "has_subscription": True,
+        "subscription": subscription,
+        "plan": plan,
+        "included_services": plan.get("included_services", []) if plan else [],
+        "discount_percentage": plan.get("discount_percentage") if plan else None
+    }
+
+
 @api_router.get("/reports/daily")
 async def get_daily_report(
     date: Optional[str] = None,
