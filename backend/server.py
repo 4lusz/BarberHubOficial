@@ -39,15 +39,10 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 # Mercado Pago Config
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 
-# WhatsApp Config - Twilio
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
-TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
-TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', 'whatsapp:+14155238886')
-
-# Initialize Twilio client
-twilio_client = None
-if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
-    twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+# Respond.io Config (WhatsApp API)
+RESPONDIO_API_TOKEN = os.environ.get('RESPONDIO_API_TOKEN', '')
+RESPONDIO_SPACE_ID = os.environ.get('RESPONDIO_SPACE_ID', '')
+RESPONDIO_CHANNEL_ID = os.environ.get('RESPONDIO_CHANNEL_ID', '')
 
 # Initialize scheduler for background jobs
 scheduler = AsyncIOScheduler()
