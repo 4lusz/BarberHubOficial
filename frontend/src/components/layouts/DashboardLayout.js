@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
   Ban,
+  BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/profissionais', label: 'Profissionais', icon: Users },
   { href: '/horarios', label: 'Horários', icon: Clock },
   { href: '/bloqueios', label: 'Bloqueios', icon: Ban },
+  { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
