@@ -193,6 +193,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/relatorios"
+        element={
+          <ProtectedRoute requireBarbershop>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/configuracoes"
         element={
           <ProtectedRoute requireBarbershop>
