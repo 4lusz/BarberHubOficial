@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { 
   Scissors, 
@@ -238,12 +237,11 @@ export default function PaymentPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="barbershop_address">Endereço</Label>
-                <Textarea
+                <Input
                   id="barbershop_address"
                   placeholder="Rua, número, bairro, cidade..."
                   value={barbershopData.address}
                   onChange={(e) => setBarbershopData({ ...barbershopData, address: e.target.value })}
-                  rows={2}
                   data-testid="barbershop-address-input"
                 />
               </div>
