@@ -3,133 +3,119 @@
 ## Descrição
 SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 
-## Problema Original
-Barbeiros usam WhatsApp para agendar clientes, o que é desorganizado e gera perda de clientes.
-
 ---
 
 ## ✅ Funcionalidades Implementadas
 
 ### Autenticação e Cadastro
 - [x] Cadastro/Login de Barbeiro (JWT + Google OAuth)
-- [x] **Fluxo de cadastro pago obrigatório**: Registro → Seleção de Plano → Pagamento → Dashboard
-- [x] Coleta de localização (GPS) no cadastro da barbearia
+- [x] Fluxo de cadastro pago obrigatório
+- [x] Coleta de localização (GPS)
 
 ### Barbearia
-- [x] Criação de barbearia com link público único (/b/{slug})
-- [x] **Cores personalizadas** (cor principal + fundo)
-- [x] **QR Code** para compartilhamento
-- [x] Configuração de endereço e localização
+- [x] Link público único (/b/{slug})
+- [x] Cores personalizadas
+- [x] QR Code para compartilhamento
 
 ### Serviços e Profissionais
-- [x] CRUD de Serviços (nome, duração, preço)
-- [x] CRUD de Profissionais (opcional)
+- [x] CRUD de Serviços e Profissionais
 - [x] Configuração de Horários de Funcionamento
-- [x] **Bloqueios manuais de horários** (férias, almoço, compromissos)
+- [x] Bloqueios manuais de horários
 
 ### Agendamentos
 - [x] Página pública de agendamento
-- [x] Fluxo: serviço → profissional → data/hora → dados → confirmar
 - [x] Dashboard com estatísticas
-- [x] Agenda visual com navegação por data e filtros
-- [x] Ações: confirmar, cancelar, concluir agendamentos
+- [x] Agenda visual
 
 ### Pagamentos
-- [x] Dois planos de assinatura (Comum R$49,90 / Premium R$99,90)
-- [x] **Integração Mercado Pago** (PIX + Cartão) ✅ CONFIGURADO
-- [x] Pagamento obrigatório no cadastro
-- [x] Webhook para confirmação de pagamento
-- [x] **Endpoint de renovação** `/api/subscription/renew`
-- [x] **Status da assinatura** `/api/subscription/status`
+- [x] Planos Comum (R$49,90) e Premium (R$99,90)
+- [x] Integração Mercado Pago ✅
+- [x] Endpoint de renovação
 
 ### Notificações WhatsApp
-- [x] **Integração Twilio WhatsApp** ✅ CONFIGURADO E TESTADO
-- [x] **Lembretes automáticos** 30 min antes do agendamento
-- [x] Scheduler rodando a cada 5 minutos
-- [x] Notificações de renovação de assinatura
+- [x] Integração Twilio ✅ (sandbox)
+- [x] **Suporte Evolution API** (produção) - pronto para configurar
+- [x] Lembretes automáticos 30 min antes
+- [x] Notificações de assinatura
 
 ### Relatórios (Premium)
-- [x] Relatório diário (disponível para todos)
-- [x] Relatório semanal com breakdown diário
-- [x] Faturamento por serviço
-- [x] Faturamento por horário
-- [x] Faturamento por profissional
-- [x] Top clientes (ordenado por visitas e valor gasto)
+- [x] Relatório diário (todos)
+- [x] Relatório semanal (Premium)
+- [x] Faturamento por serviço/horário/profissional
+- [x] Top clientes
 
-### Cobrança Recorrente
-- [x] Job a cada 12h verifica assinaturas expirando
-- [x] Envia lembrete por WhatsApp 3 dias antes
-- [x] Endpoint de renovação com Mercado Pago
-
----
-
-## Stack Técnica
-- **Backend**: FastAPI + MongoDB + APScheduler
-- **Frontend**: React + Tailwind CSS + Shadcn UI
-- **Auth**: JWT + Emergent Google OAuth
-- **Pagamento**: Mercado Pago ✅
-- **WhatsApp**: Twilio ✅
+### 🆕 Planos para Clientes (Premium)
+- [x] **Criar planos de fidelidade/mensalidade**
+- [x] Definir preço, duração, benefícios, desconto
+- [x] **Cadastrar assinantes** (envia WhatsApp de boas-vindas)
+- [x] Renovar e cancelar assinaturas
+- [x] Verificar assinatura ativa no agendamento público
 
 ---
 
-## Jobs Automáticos (Scheduler)
+## WhatsApp - Provedores
+
+### Twilio (Sandbox - Teste)
+- ✅ Configurado e funcionando
+- ⚠️ Só funciona para números que entraram no sandbox
+
+### Evolution API (Produção)
+- ✅ Código pronto para integração
+- Configurar no `.env`:
+```
+EVOLUTION_API_URL=https://sua-instancia.com
+EVOLUTION_API_KEY=sua-chave
+EVOLUTION_INSTANCE=barberhub
+```
+
+---
+
+## Jobs Automáticos
 
 | Job | Intervalo | Função |
 |-----|-----------|--------|
-| check_and_send_reminders | 5 min | Envia lembretes WhatsApp |
-| check_expired_subscriptions | 1 hora | Desativa planos expirados |
-| process_recurring_billing | 12 horas | Envia avisos de renovação |
+| Lembretes WhatsApp | 5 min | Envia 30 min antes |
+| Verificar expiração | 1 hora | Desativa planos |
+| Aviso de renovação | 12 horas | Lembra 3 dias antes |
 
 ---
 
-## APIs Principais
+## APIs de Planos de Clientes
 
-### Autenticação
-- `POST /api/auth/register` - Cadastro
-- `POST /api/auth/login` - Login
-- `GET /api/auth/me` - Usuário atual
+### Planos
+- `GET /api/client-plans` - Listar planos
+- `POST /api/client-plans` - Criar plano
+- `PUT /api/client-plans/{id}` - Editar
+- `DELETE /api/client-plans/{id}` - Excluir
 
-### Assinatura
-- `GET /api/plans` - Lista planos
-- `POST /api/subscription/create` - Criar assinatura
-- `POST /api/subscription/renew` - Renovar assinatura
-- `GET /api/subscription/status` - Status da assinatura
-- `POST /api/barbershops/activate` - Ativar barbearia
-
-### Relatórios
-- `GET /api/reports/daily` - Relatório diário
-- `GET /api/reports/weekly` - Relatório semanal (Premium)
-- `GET /api/reports/revenue` - Faturamento detalhado (Premium)
-- `GET /api/reports/clients` - Top clientes (Premium)
-
-### Tasks
-- `GET /api/tasks/scheduler-status` - Status do scheduler
-- `POST /api/tasks/send-reminders` - Trigger manual
-- `POST /api/tasks/test-whatsapp?phone=X` - Teste WhatsApp
+### Assinaturas
+- `GET /api/client-subscriptions` - Listar assinantes
+- `POST /api/client-subscriptions` - Adicionar assinante
+- `POST /api/client-subscriptions/{id}/renew` - Renovar
+- `POST /api/client-subscriptions/{id}/cancel` - Cancelar
+- `GET /api/client-subscriptions/check/{phone}` - Verificar no agendamento
 
 ---
 
 ## Credenciais Configuradas
 
-| Serviço | Status | Chave |
-|---------|--------|-------|
-| Mercado Pago | ✅ Ativo | APP_USR-71754... |
-| Twilio | ✅ Ativo | AC19009... |
+| Serviço | Status |
+|---------|--------|
+| Mercado Pago | ✅ Ativo |
+| Twilio | ✅ Sandbox |
+| Evolution API | ⏳ Aguardando config |
 
 ---
 
 ## Backlog
 
 ### P1 - Importante
-- [ ] Página de upgrade de plano no frontend
-- [ ] Página de status da assinatura no dashboard
-- [ ] Histórico de pagamentos
+- [ ] Configurar Evolution API para produção
+- [ ] Aplicar desconto automático para assinantes no agendamento
 
 ### P2 - Nice to Have
-- [ ] Múltiplas unidades por conta
+- [ ] Integração Google Calendar
 - [ ] App mobile nativo
-- [ ] Dashboard de analytics avançado
-- [ ] Integração com Google Calendar
 
 ---
 
