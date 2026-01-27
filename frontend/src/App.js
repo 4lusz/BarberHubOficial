@@ -202,10 +202,10 @@ function AppRouter() {
         }
       />
       <Route
-        path="/planos-clientes"
+        path="/clientes-vip"
         element={
           <ProtectedRoute requireBarbershop>
-            <ClientPlansPage />
+            <VipClientsPage />
           </ProtectedRoute>
         }
       />
