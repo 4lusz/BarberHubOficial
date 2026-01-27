@@ -2279,14 +2279,12 @@ async def process_recurring_billing():
                 # Get owner info
                 owner = await db.users.find_one({"barbershop_id": barbershop["barbershop_id"]}, {"_id": 0})
                 
-                if owner and twilio_client:
+                if owner and (RESPONDIO_API_TOKEN and RESPONDIO_SPACE_ID and RESPONDIO_CHANNEL_ID):
                     # Send WhatsApp reminder about renewal
                     plan = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"))
                     try:
-                        to_number = format_phone_for_whatsapp(owner.get("phone", ""))
-                        if to_number and len(to_number) > 15:
-                            message = twilio_client.messages.create(
-                                body=f"""⚠️ *Lembrete de Renovação*
+                        if owner.get("phone"):
+                            message_text = f"""⚠️ *Lembrete de Renovação*
 
 Olá! Sua assinatura do BarberHub ({plan['name']}) expira em breve.
 
@@ -2294,11 +2292,11 @@ Olá! Sua assinatura do BarberHub ({plan['name']}) expira em breve.
 
 Para continuar recebendo agendamentos, renove sua assinatura acessando o painel.
 
-Obrigado por usar o BarberHub! 💈""",
-                                from_=TWILIO_WHATSAPP_NUMBER,
-                                to=to_number
-                            )
-                            logger.info(f"Renewal reminder sent to {barbershop['barbershop_id']}: {message.sid}")
+Obrigado por usar o BarberHub! 💈"""
+                            
+                            result = await send_whatsapp_message(owner["phone"], message_text)
+                            if result:
+                                logger.info(f"Renewal reminder sent to {barbershop['barbershop_id']}: {result}")
                     except Exception as e:
                         logger.error(f"Failed to send renewal reminder: {str(e)}")
                 
