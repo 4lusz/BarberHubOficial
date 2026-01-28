@@ -145,6 +145,13 @@ class BarbershopUpdate(BaseModel):
     longitude: Optional[float] = None
     primary_color: Optional[str] = None
     background_color: Optional[str] = None
+    font_style: Optional[str] = None  # modern, classic, bold
+    logo_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    about_text: Optional[str] = None
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    whatsapp_number: Optional[str] = None
 
 class Barbershop(BaseModel):
     barbershop_id: str
@@ -158,6 +165,14 @@ class Barbershop(BaseModel):
     longitude: Optional[float] = None
     primary_color: str = "#F59E0B"
     background_color: str = "#09090B"
+    font_style: str = "modern"
+    logo_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    about_text: Optional[str] = None
+    instagram_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+    gallery_images: List[str] = []
     plan: str = "comum"
     plan_status: str = "pending"  # pending, active, expired, cancelled
     plan_expires_at: Optional[datetime] = None
