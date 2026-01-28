@@ -1602,7 +1602,9 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
     if data.address is not None:
         update_data["address"] = data.address
     if data.phone is not None:
-        update_data["phone"] = data.phone
+        # Normalize phone number
+        phone_result = normalize_brazilian_phone(data.phone)
+        update_data["phone"] = phone_result["normalized"] if phone_result["success"] else data.phone
     if data.latitude is not None:
         update_data["latitude"] = data.latitude
     if data.longitude is not None:
@@ -1626,7 +1628,9 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
     if data.facebook_url is not None:
         update_data["facebook_url"] = data.facebook_url
     if data.whatsapp_number is not None:
-        update_data["whatsapp_number"] = data.whatsapp_number
+        # Normalize WhatsApp number
+        whatsapp_result = normalize_brazilian_phone(data.whatsapp_number)
+        update_data["whatsapp_number"] = whatsapp_result["normalized"] if whatsapp_result["success"] else data.whatsapp_number
     
     if update_data:
         await db.barbershops.update_one(
