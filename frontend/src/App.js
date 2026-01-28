@@ -211,6 +211,16 @@ function AppRouter() {
         }
       />
       <Route
+        path="/assinatura"
+        element={
+          <ProtectedRoute requireBarbershop>
+            <DashboardLayout>
+              <SubscriptionPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/configuracoes"
         element={
           <ProtectedRoute requireBarbershop>
