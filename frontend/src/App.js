@@ -97,6 +97,9 @@ function AppRouter() {
       <Route path="/b/:slug" element={<PublicBookingPage />} />
       <Route path="/minha-area" element={<ClientAreaPage />} />
       <Route path="/super-admin" element={<SuperAdminPage />} />
+      <Route path="/termos" element={<TermsPage />} />
+      <Route path="/privacidade" element={<PrivacyPage />} />
+      <Route path="/faq" element={<FAQPage />} />
       
       {/* Payment Flow Routes */}
       <Route
