@@ -203,6 +203,14 @@ export default function PublicBookingPage() {
     }
   };
 
+  const handlePhoneNormalized = (normalizedPhone) => {
+    setBooking(prev => ({ ...prev, clientPhoneNormalized: normalizedPhone }));
+    // Check VIP with normalized phone
+    if (normalizedPhone) {
+      checkVipStatus(normalizedPhone.replace(/\D/g, ''));
+    }
+  };
+
   const calculateFinalPrice = () => {
     if (!booking.service) return 0;
     const originalPrice = booking.service.price;
@@ -214,6 +222,14 @@ export default function PublicBookingPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Use normalized phone for submission
+    const phoneToSubmit = booking.clientPhoneNormalized || booking.clientPhone;
+    if (!phoneToSubmit || phoneToSubmit.replace(/\D/g, '').length < 10) {
+      toast.error('Informe um número de WhatsApp válido com DDD');
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -224,7 +240,7 @@ export default function PublicBookingPage() {
         date: format(booking.date, 'yyyy-MM-dd'),
         time: booking.time,
         client_name: booking.clientName,
-        client_phone: booking.clientPhone,
+        client_phone: phoneToSubmit,
         client_email: booking.clientEmail || null,
       });
       setSuccessData(response.data);
