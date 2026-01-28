@@ -2381,6 +2381,156 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
     }
 
 
+# ==================== ADMIN: DEMO ACCOUNT ====================
+
+@api_router.post("/admin/create-demo-account")
+async def create_demo_premium_account(secret_key: str):
+    """Create a demo premium account for testing (no payment required)"""
+    # Simple secret key protection
+    if secret_key != "barberhub-demo-2024":
+        raise HTTPException(status_code=403, detail="Chave inválida")
+    
+    # Check if demo account already exists
+    existing = await db.users.find_one({"email": "demo@barberhubpro.com.br"}, {"_id": 0})
+    if existing:
+        barbershop = await db.barbershops.find_one(
+            {"owner_id": existing["user_id"]},
+            {"_id": 0}
+        )
+        return {
+            "message": "Conta demo já existe",
+            "email": "demo@barberhubpro.com.br",
+            "password": "Demo@2024",
+            "barbershop_slug": barbershop["slug"] if barbershop else None
+        }
+    
+    # Create demo user
+    user_id = generate_id("user")
+    user_doc = {
+        "user_id": user_id,
+        "email": "demo@barberhubpro.com.br",
+        "password": hash_password("Demo@2024"),
+        "name": "Barbearia Demo",
+        "role": "barber",
+        "barbershop_id": None,
+        "phone": "+5511999999999",
+        "picture": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user_doc)
+    
+    # Create demo barbershop
+    barbershop_id = generate_id("barb")
+    expires_at = datetime.now(timezone.utc) + timedelta(days=365 * 10)  # 10 years
+    
+    barbershop_doc = {
+        "barbershop_id": barbershop_id,
+        "owner_id": user_id,
+        "name": "Barbearia Demo Premium",
+        "slug": "demo-premium",
+        "description": "Conta de demonstração do BarberHub com todas as funcionalidades Premium",
+        "address": "Rua Demonstração, 123 - São Paulo, SP",
+        "phone": "+5511999999999",
+        "latitude": -23.5505,
+        "longitude": -46.6333,
+        "primary_color": "#F59E0B",
+        "background_color": "#09090B",
+        "plan": "premium",
+        "plan_status": "active",
+        "plan_expires_at": expires_at.isoformat(),
+        "is_demo": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.barbershops.insert_one(barbershop_doc)
+    
+    # Update user with barbershop_id
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"barbershop_id": barbershop_id}}
+    )
+    
+    # Create default business hours
+    default_hours = []
+    for day in range(6):
+        default_hours.append({
+            "barbershop_id": barbershop_id,
+            "day_of_week": day,
+            "start_time": "09:00",
+            "end_time": "19:00",
+            "is_closed": False
+        })
+    default_hours.append({
+        "barbershop_id": barbershop_id,
+        "day_of_week": 6,
+        "start_time": "09:00",
+        "end_time": "14:00",
+        "is_closed": False
+    })
+    await db.business_hours.insert_many(default_hours)
+    
+    # Create sample services
+    services = [
+        {"name": "Corte Masculino", "duration": 30, "price": 45.00, "description": "Corte moderno e estiloso"},
+        {"name": "Barba", "duration": 20, "price": 30.00, "description": "Barba completa com navalha"},
+        {"name": "Corte + Barba", "duration": 50, "price": 65.00, "description": "Combo completo"},
+        {"name": "Pigmentação", "duration": 40, "price": 80.00, "description": "Pigmentação de barba ou cabelo"},
+        {"name": "Hidratação", "duration": 30, "price": 35.00, "description": "Tratamento capilar"}
+    ]
+    for s in services:
+        await db.services.insert_one({
+            "service_id": generate_id("serv"),
+            "barbershop_id": barbershop_id,
+            **s,
+            "active": True
+        })
+    
+    # Create sample professionals
+    professionals = [
+        {"name": "João Silva", "phone": "+5511988888888", "email": "joao@demo.com"},
+        {"name": "Pedro Santos", "phone": "+5511977777777", "email": "pedro@demo.com"}
+    ]
+    for p in professionals:
+        await db.professionals.insert_one({
+            "professional_id": generate_id("prof"),
+            "barbershop_id": barbershop_id,
+            **p,
+            "active": True
+        })
+    
+    # Create sample VIP client
+    await db.vip_clients.insert_one({
+        "vip_id": generate_id("vip"),
+        "barbershop_id": barbershop_id,
+        "client_name": "Cliente VIP Teste",
+        "client_phone": "+5511966666666",
+        "client_email": "vip@teste.com",
+        "discount_percentage": 15.0,
+        "notes": "Cliente de demonstração",
+        "active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "success": True,
+        "message": "Conta demo premium criada com sucesso!",
+        "credentials": {
+            "email": "demo@barberhubpro.com.br",
+            "password": "Demo@2024"
+        },
+        "barbershop": {
+            "name": "Barbearia Demo Premium",
+            "slug": "demo-premium",
+            "public_url": "https://barberhubpro.com.br/b/demo-premium"
+        },
+        "features": {
+            "plan": "premium",
+            "services": len(services),
+            "professionals": len(professionals),
+            "vip_clients": 1
+        }
+    }
+
+
 # ==================== MAIN APP SETUP ====================
 
 app.include_router(api_router)
