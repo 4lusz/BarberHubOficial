@@ -157,6 +157,7 @@ class BarbershopUpdate(BaseModel):
     font_style: Optional[str] = None  # modern, classic, bold
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
+    banner_position: Optional[str] = None  # top, center, bottom
     about_text: Optional[str] = None
     instagram_url: Optional[str] = None
     facebook_url: Optional[str] = None
@@ -177,6 +178,7 @@ class Barbershop(BaseModel):
     font_style: str = "modern"
     logo_url: Optional[str] = None
     banner_url: Optional[str] = None
+    banner_position: str = "center"  # top, center, bottom
     about_text: Optional[str] = None
     instagram_url: Optional[str] = None
     facebook_url: Optional[str] = None
