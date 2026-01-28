@@ -383,8 +383,13 @@ export default function PublicBookingPage() {
       <header className="relative">
         {data.barbershop.banner_url ? (
           <div 
-            className="h-48 bg-cover bg-center"
-            style={{ backgroundImage: `url(${getImageUrl(data.barbershop.banner_url)})` }}
+            className="h-48 bg-cover"
+            style={{ 
+              backgroundImage: `url(${getImageUrl(data.barbershop.banner_url)})`,
+              backgroundPosition: data.barbershop.banner_position === 'top' ? 'top' 
+                : data.barbershop.banner_position === 'bottom' ? 'bottom' 
+                : 'center'
+            }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70" />
           </div>
