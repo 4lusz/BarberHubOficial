@@ -3122,6 +3122,483 @@ async def create_demo_premium_account(secret_key: str):
     }
 
 
+# ==================== SUPER ADMIN ====================
+
+class SuperAdminLogin(BaseModel):
+    password: str
+
+@api_router.post("/super-admin/login")
+async def super_admin_login(data: SuperAdminLogin):
+    """Login to Super Admin panel"""
+    if data.password != SUPER_ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Senha incorreta")
+    
+    # Generate admin token
+    token_data = {
+        "role": "super_admin",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+    }
+    token = jwt.encode(token_data, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    
+    return {"success": True, "token": token}
+
+async def verify_super_admin(request: Request):
+    """Verify super admin token"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token não fornecido")
+    
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("role") != "super_admin":
+            raise HTTPException(status_code=403, detail="Acesso negado")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+@api_router.get("/super-admin/dashboard")
+async def super_admin_dashboard(admin: dict = Depends(verify_super_admin)):
+    """Get dashboard metrics for super admin"""
+    
+    # Total barbershops
+    total_barbershops = await db.barbershops.count_documents({})
+    active_barbershops = await db.barbershops.count_documents({"plan_status": "active"})
+    expired_barbershops = await db.barbershops.count_documents({"plan_status": "expired"})
+    pending_barbershops = await db.barbershops.count_documents({"plan_status": "pending"})
+    
+    # Subscriptions by plan
+    comum_active = await db.barbershops.count_documents({"plan": "comum", "plan_status": "active"})
+    premium_active = await db.barbershops.count_documents({"plan": "premium", "plan_status": "active"})
+    
+    # Calculate MRR (Monthly Recurring Revenue)
+    mrr = (comum_active * 49.90) + (premium_active * 99.90)
+    
+    # Total appointments
+    total_appointments = await db.appointments.count_documents({})
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    appointments_today = await db.appointments.count_documents({"date": today})
+    
+    # Appointments this month
+    first_day_of_month = datetime.now(timezone.utc).replace(day=1).strftime("%Y-%m-%d")
+    appointments_this_month = await db.appointments.count_documents({
+        "date": {"$gte": first_day_of_month}
+    })
+    
+    # Total users
+    total_users = await db.users.count_documents({})
+    barbers = await db.users.count_documents({"role": "barber"})
+    clients = await db.users.count_documents({"role": "client"})
+    
+    # VIP clients
+    total_vip = await db.vip_clients.count_documents({"active": True})
+    
+    # Failed payments (subscriptions with issues)
+    failed_subscriptions = await db.subscriptions.count_documents({"status": {"$in": ["cancelled", "paused"]}})
+    
+    # Recent activity - last 7 days signups
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    new_signups = await db.users.count_documents({
+        "created_at": {"$gte": seven_days_ago},
+        "role": "barber"
+    })
+    
+    # Churn calculation (cancelled in last 30 days)
+    thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    cancelled_last_month = await db.subscriptions.count_documents({
+        "status": "cancelled",
+        "cancelled_at": {"$gte": thirty_days_ago}
+    })
+    
+    return {
+        "overview": {
+            "total_barbershops": total_barbershops,
+            "active_barbershops": active_barbershops,
+            "expired_barbershops": expired_barbershops,
+            "pending_barbershops": pending_barbershops,
+            "total_appointments": total_appointments,
+            "appointments_today": appointments_today,
+            "appointments_this_month": appointments_this_month,
+            "total_users": total_users,
+            "barbers": barbers,
+            "clients": clients,
+            "total_vip_clients": total_vip
+        },
+        "financial": {
+            "mrr": round(mrr, 2),
+            "comum_subscriptions": comum_active,
+            "premium_subscriptions": premium_active,
+            "failed_subscriptions": failed_subscriptions,
+            "revenue_comum": round(comum_active * 49.90, 2),
+            "revenue_premium": round(premium_active * 99.90, 2)
+        },
+        "growth": {
+            "new_signups_7d": new_signups,
+            "cancelled_30d": cancelled_last_month,
+            "churn_rate": round((cancelled_last_month / max(active_barbershops, 1)) * 100, 2)
+        },
+        "integrations": {
+            "mercadopago": {
+                "configured": bool(MERCADOPAGO_ACCESS_TOKEN),
+                "mode": "production" if MERCADOPAGO_ACCESS_TOKEN else "not_configured"
+            },
+            "whatsapp_respondio": {
+                "configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID),
+                "token_set": bool(RESPONDIO_API_TOKEN),
+                "channel_set": bool(RESPONDIO_CHANNEL_ID)
+            },
+            "email_resend": {
+                "configured": bool(resend.api_key)
+            }
+        }
+    }
+
+@api_router.get("/super-admin/barbershops")
+async def super_admin_list_barbershops(
+    admin: dict = Depends(verify_super_admin),
+    plan: Optional[str] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 50,
+    skip: int = 0
+):
+    """List all barbershops with filters"""
+    query = {}
+    
+    if plan:
+        query["plan"] = plan
+    if status:
+        query["plan_status"] = status
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"slug": {"$regex": search, "$options": "i"}}
+        ]
+    
+    barbershops = await db.barbershops.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    total = await db.barbershops.count_documents(query)
+    
+    # Enrich with stats
+    enriched = []
+    for b in barbershops:
+        appointments_count = await db.appointments.count_documents({"barbershop_id": b["barbershop_id"]})
+        services_count = await db.services.count_documents({"barbershop_id": b["barbershop_id"]})
+        professionals_count = await db.professionals.count_documents({"barbershop_id": b["barbershop_id"]})
+        
+        # Get owner info
+        owner = await db.users.find_one({"barbershop_id": b["barbershop_id"], "role": "barber"}, {"_id": 0, "name": 1, "email": 1})
+        
+        enriched.append({
+            **b,
+            "stats": {
+                "appointments": appointments_count,
+                "services": services_count,
+                "professionals": professionals_count
+            },
+            "owner": owner
+        })
+    
+    return {
+        "barbershops": enriched,
+        "total": total,
+        "page": skip // limit + 1,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/super-admin/barbershops/{barbershop_id}")
+async def super_admin_get_barbershop(barbershop_id: str, admin: dict = Depends(verify_super_admin)):
+    """Get detailed barbershop info"""
+    barbershop = await db.barbershops.find_one({"barbershop_id": barbershop_id}, {"_id": 0})
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Get owner
+    owner = await db.users.find_one({"barbershop_id": barbershop_id, "role": "barber"}, {"_id": 0})
+    
+    # Get subscription
+    subscription = await db.subscriptions.find_one({"barbershop_id": barbershop_id}, {"_id": 0})
+    
+    # Get stats
+    appointments = await db.appointments.find({"barbershop_id": barbershop_id}, {"_id": 0}).to_list(100)
+    services = await db.services.find({"barbershop_id": barbershop_id}, {"_id": 0}).to_list(50)
+    professionals = await db.professionals.find({"barbershop_id": barbershop_id}, {"_id": 0}).to_list(20)
+    vip_clients = await db.vip_clients.find({"barbershop_id": barbershop_id}, {"_id": 0}).to_list(100)
+    
+    # Calculate revenue
+    total_revenue = sum(apt.get("final_price", 0) for apt in appointments if apt.get("status") == "completed")
+    
+    return {
+        "barbershop": barbershop,
+        "owner": owner,
+        "subscription": subscription,
+        "stats": {
+            "total_appointments": len(appointments),
+            "completed_appointments": len([a for a in appointments if a.get("status") == "completed"]),
+            "cancelled_appointments": len([a for a in appointments if a.get("status") == "cancelled"]),
+            "total_revenue": round(total_revenue, 2),
+            "services_count": len(services),
+            "professionals_count": len(professionals),
+            "vip_clients_count": len(vip_clients)
+        },
+        "services": services,
+        "professionals": professionals,
+        "vip_clients": vip_clients,
+        "recent_appointments": appointments[:20]
+    }
+
+@api_router.put("/super-admin/barbershops/{barbershop_id}/status")
+async def super_admin_update_barbershop_status(
+    barbershop_id: str,
+    status: str,
+    admin: dict = Depends(verify_super_admin)
+):
+    """Activate or deactivate a barbershop"""
+    if status not in ["active", "expired", "suspended"]:
+        raise HTTPException(status_code=400, detail="Status inválido")
+    
+    result = await db.barbershops.update_one(
+        {"barbershop_id": barbershop_id},
+        {"$set": {"plan_status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    return {"success": True, "message": f"Status atualizado para {status}"}
+
+@api_router.get("/super-admin/subscriptions")
+async def super_admin_list_subscriptions(admin: dict = Depends(verify_super_admin)):
+    """List all subscriptions"""
+    subscriptions = await db.subscriptions.find({}, {"_id": 0}).to_list(500)
+    
+    # Enrich with barbershop info
+    enriched = []
+    for sub in subscriptions:
+        barbershop = await db.barbershops.find_one(
+            {"barbershop_id": sub["barbershop_id"]}, 
+            {"_id": 0, "name": 1, "slug": 1, "plan": 1}
+        )
+        enriched.append({
+            **sub,
+            "barbershop": barbershop
+        })
+    
+    return {"subscriptions": enriched, "total": len(enriched)}
+
+@api_router.get("/super-admin/payments")
+async def super_admin_list_payments(
+    admin: dict = Depends(verify_super_admin),
+    status: Optional[str] = None,
+    limit: int = 100
+):
+    """List payment history"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    payments = await db.payments.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return {"payments": payments, "total": len(payments)}
+
+@api_router.get("/super-admin/activity-logs")
+async def super_admin_activity_logs(admin: dict = Depends(verify_super_admin), limit: int = 100):
+    """Get recent activity logs"""
+    
+    # Recent signups
+    recent_users = await db.users.find(
+        {"role": "barber"},
+        {"_id": 0, "name": 1, "email": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Recent appointments
+    recent_appointments = await db.appointments.find(
+        {},
+        {"_id": 0, "barbershop_id": 1, "client_name": 1, "date": 1, "time": 1, "status": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(30).to_list(30)
+    
+    # Recent subscriptions
+    recent_subscriptions = await db.subscriptions.find(
+        {},
+        {"_id": 0, "barbershop_id": 1, "plan": 1, "status": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    return {
+        "recent_signups": recent_users,
+        "recent_appointments": recent_appointments,
+        "recent_subscriptions": recent_subscriptions
+    }
+
+@api_router.get("/super-admin/whatsapp-report")
+async def super_admin_whatsapp_report(admin: dict = Depends(verify_super_admin)):
+    """Get detailed WhatsApp (Respond.io) integration report"""
+    
+    return {
+        "integration_status": {
+            "configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID),
+            "api_token_set": bool(RESPONDIO_API_TOKEN),
+            "channel_id_set": bool(RESPONDIO_CHANNEL_ID),
+            "provider": "Respond.io"
+        },
+        "message_types": [
+            {
+                "type": "booking_confirmation",
+                "trigger": "Quando um cliente finaliza um agendamento",
+                "content": [
+                    "Nome do cliente",
+                    "Nome da barbearia",
+                    "Serviço agendado",
+                    "Data e horário",
+                    "Valor (com desconto VIP se aplicável)",
+                    "Endereço com link do Google Maps"
+                ],
+                "example": """✅ *Agendamento Confirmado!*
+
+Olá João!
+
+Seu agendamento na *Barbearia Demo Premium* foi confirmado:
+
+📅 *Data:* 29/01/2026
+🕐 *Horário:* 14:00
+💇 *Serviço:* Corte + Barba
+💰 *Valor:* R$ 50,00
+
+📍 *Endereço:* Rua Demonstração, 123 - São Paulo
+🗺️ Ver no mapa: https://maps.google.com/...
+
+Até lá! 💈"""
+            },
+            {
+                "type": "appointment_reminder",
+                "trigger": "30 minutos antes do horário agendado (automático)",
+                "content": [
+                    "Nome do cliente",
+                    "Nome da barbearia", 
+                    "Serviço",
+                    "Horário",
+                    "Valor",
+                    "Localização"
+                ],
+                "example": """⏰ *Lembrete de Agendamento*
+
+Olá João!
+
+Seu horário na *Barbearia Demo Premium* é daqui a 30 minutos!
+
+📅 Hoje às 14:00
+💇 Corte + Barba
+💰 R$ 50,00
+
+📍 Rua Demonstração, 123 - São Paulo
+
+Estamos te esperando! 💈"""
+            },
+            {
+                "type": "vip_notification",
+                "trigger": "Quando o dono marca um cliente como VIP",
+                "content": [
+                    "Nome do cliente",
+                    "Nome da barbearia",
+                    "Percentual de desconto"
+                ],
+                "example": """🌟 *Parabéns, você é VIP!*
+
+Olá Maria!
+
+Você agora faz parte dos clientes especiais da *Barbearia Demo Premium*!
+
+🎁 Seu benefício: *15% de desconto* em todos os serviços!
+
+Agende seu próximo horário e aproveite! 💈"""
+            },
+            {
+                "type": "payment_reminder",
+                "trigger": "3 dias antes da renovação da assinatura (para donos)",
+                "content": [
+                    "Nome do plano",
+                    "Valor",
+                    "Data de renovação"
+                ],
+                "example": """💳 *Lembrete de Renovação*
+
+Olá!
+
+Sua assinatura do *Plano Premium* será renovada em 3 dias.
+
+💰 Valor: R$ 99,90
+📅 Data: 01/02/2026
+
+Certifique-se de que seu método de pagamento está atualizado!"""
+            },
+            {
+                "type": "payment_failed",
+                "trigger": "Quando uma cobrança falha",
+                "content": [
+                    "Nome do plano",
+                    "Motivo da falha",
+                    "Instruções para regularização"
+                ],
+                "example": """⚠️ *Falha no Pagamento*
+
+Olá!
+
+Não conseguimos processar o pagamento da sua assinatura do *Plano Premium*.
+
+Por favor, verifique seu método de pagamento e tente novamente.
+
+Acesse: https://barberhubpro.com.br/assinatura"""
+            },
+            {
+                "type": "payment_success",
+                "trigger": "Quando um pagamento é confirmado",
+                "content": [
+                    "Nome do plano",
+                    "Valor pago",
+                    "Próxima renovação"
+                ],
+                "example": """✅ *Pagamento Confirmado!*
+
+Sua assinatura do *Plano Premium* foi renovada com sucesso!
+
+💰 Valor: R$ 99,90
+📅 Próxima renovação: 01/03/2026
+
+Obrigado por usar o BarberHub! 💈"""
+            }
+        ],
+        "scheduler_jobs": [
+            {
+                "job": "check_and_send_reminders",
+                "frequency": "A cada 5 minutos",
+                "description": "Verifica agendamentos próximos e envia lembretes 30 min antes"
+            },
+            {
+                "job": "check_expired_subscriptions", 
+                "frequency": "A cada 1 hora",
+                "description": "Verifica assinaturas expiradas e envia alertas"
+            },
+            {
+                "job": "process_recurring_billing",
+                "frequency": "A cada 12 horas",
+                "description": "Processa cobranças recorrentes via Mercado Pago"
+            }
+        ],
+        "api_details": {
+            "provider": "Respond.io",
+            "endpoint": "https://api.respond.io/v2/contact/phone:{phone}/message",
+            "authentication": "Bearer Token",
+            "phone_format": "E.164 sem o + (ex: 5564999766685)"
+        },
+        "notes": [
+            "As mensagens são enviadas apenas se RESPONDIO_API_TOKEN e RESPONDIO_CHANNEL_ID estiverem configurados",
+            "Os números de telefone são normalizados automaticamente para o formato E.164",
+            "Em caso de falha no envio, o erro é logado mas não interrompe o fluxo",
+            "O sistema funciona mesmo sem WhatsApp (as mensagens simplesmente não são enviadas)"
+        ]
+    }
+
+
 # ==================== MAIN APP SETUP ====================
 
 app.include_router(api_router)
