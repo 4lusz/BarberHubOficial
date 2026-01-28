@@ -3,6 +3,8 @@
 ## Descrição
 SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 
+**Domínio de Produção:** `barberhubpro.com.br`
+
 ---
 
 ## ✅ Funcionalidades Implementadas
@@ -11,10 +13,11 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Cadastro/Login de Barbeiro (JWT + Google OAuth)
 - [x] Fluxo de cadastro pago obrigatório
 - [x] Coleta de localização (GPS)
+- [x] Redirecionamento para seleção de plano após cadastro
 
 ### Barbearia
 - [x] Link público único (/b/{slug})
-- [x] Cores personalizadas
+- [x] Cores personalizadas (primária + fundo)
 - [x] QR Code para compartilhamento
 
 ### Serviços e Profissionais
@@ -26,17 +29,21 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Página pública de agendamento
 - [x] Dashboard com estatísticas
 - [x] Agenda visual
+- [x] **Desconto VIP automático** (verificado pelo telefone)
 
-### Pagamentos
+### Pagamentos - Mercado Pago
 - [x] Planos Comum (R$49,90) e Premium (R$99,90)
-- [x] Integração Mercado Pago ✅
+- [x] **Integração Mercado Pago PRODUÇÃO** ✅
 - [x] Endpoint de renovação
+- [x] Webhook para confirmação de pagamento
+- [x] URLs de callback configuradas para `barberhubpro.com.br`
 
-### Notificações WhatsApp
-- [x] Integração Twilio ✅ (sandbox)
-- [x] **Suporte Evolution API** (produção) - pronto para configurar
+### Notificações WhatsApp - Respond.io
+- [x] **Integração Respond.io** ✅ (API configurada)
+- [x] Confirmação automática ao criar agendamento
 - [x] Lembretes automáticos 30 min antes
-- [x] Notificações de assinatura
+- [x] Notificações incluem localização (Google Maps)
+- [x] Mensagens com desconto VIP (quando aplicável)
 
 ### Relatórios (Premium)
 - [x] Relatório diário (todos)
@@ -44,33 +51,16 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Faturamento por serviço/horário/profissional
 - [x] Top clientes
 
-### 🆕 Planos para Clientes (Premium)
-- [x] **Criar planos de fidelidade/mensalidade**
-- [x] Definir preço, duração, benefícios, desconto
-- [x] **Cadastrar assinantes** (envia WhatsApp de boas-vindas)
-- [x] Renovar e cancelar assinaturas
-- [x] Verificar assinatura ativa no agendamento público
+### Clientes VIP (Premium)
+- [x] Cadastrar clientes como VIP
+- [x] Definir percentual de desconto por cliente
+- [x] **Desconto aplicado automaticamente no agendamento**
+- [x] Verificação VIP no frontend (ao digitar telefone)
+- [x] WhatsApp de boas-vindas ao tornar-se VIP
 
 ---
 
-## WhatsApp - Provedores
-
-### Twilio (Sandbox - Teste)
-- ✅ Configurado e funcionando
-- ⚠️ Só funciona para números que entraram no sandbox
-
-### Evolution API (Produção)
-- ✅ Código pronto para integração
-- Configurar no `.env`:
-```
-EVOLUTION_API_URL=https://sua-instancia.com
-EVOLUTION_API_KEY=sua-chave
-EVOLUTION_INSTANCE=barberhub
-```
-
----
-
-## Jobs Automáticos
+## Jobs Automáticos (APScheduler)
 
 | Job | Intervalo | Função |
 |-----|-----------|--------|
@@ -80,43 +70,72 @@ EVOLUTION_INSTANCE=barberhub
 
 ---
 
-## APIs de Planos de Clientes
+## Integrações Configuradas
 
-### Planos
-- `GET /api/client-plans` - Listar planos
-- `POST /api/client-plans` - Criar plano
-- `PUT /api/client-plans/{id}` - Editar
-- `DELETE /api/client-plans/{id}` - Excluir
-
-### Assinaturas
-- `GET /api/client-subscriptions` - Listar assinantes
-- `POST /api/client-subscriptions` - Adicionar assinante
-- `POST /api/client-subscriptions/{id}/renew` - Renovar
-- `POST /api/client-subscriptions/{id}/cancel` - Cancelar
-- `GET /api/client-subscriptions/check/{phone}` - Verificar no agendamento
+| Serviço | Status | Modo |
+|---------|--------|------|
+| Mercado Pago | ✅ Ativo | **PRODUÇÃO** |
+| Respond.io (WhatsApp) | ✅ Configurado | Produção |
+| Resend (Email) | ✅ Ativo | Produção |
 
 ---
 
-## Credenciais Configuradas
+## Fluxo de Desconto VIP
 
-| Serviço | Status |
-|---------|--------|
-| Mercado Pago | ✅ Ativo |
-| Twilio | ✅ Sandbox |
-| Evolution API | ⏳ Aguardando config |
+1. Cliente acessa página pública `/b/{slug}`
+2. Seleciona serviço e horário
+3. Ao digitar telefone, sistema verifica se é VIP
+4. Se VIP: mostra badge, auto-preenche nome, exibe desconto no resumo
+5. Ao confirmar: desconto é aplicado e salvo no agendamento
+6. WhatsApp de confirmação inclui o valor com desconto
+
+---
+
+## APIs Principais
+
+### Públicas
+- `GET /api/plans` - Lista planos
+- `GET /api/barbershops/public/{slug}` - Dados da barbearia
+- `GET /api/vip-clients/check/{phone}?barbershop_id=X` - Verifica VIP
+- `POST /api/appointments` - Cria agendamento (aplica desconto VIP)
+
+### Autenticadas
+- `POST /api/auth/{register, login}` - Autenticação
+- `POST /api/subscription/create` - Criar assinatura (Mercado Pago)
+- `GET /api/vip-clients` - Lista VIPs (Premium)
+- `POST /api/vip-clients` - Adiciona VIP (Premium)
+- `GET /api/reports/revenue` - Relatório (Premium)
+
+---
+
+## Credenciais de Produção
+
+Todas as credenciais estão no arquivo `/app/backend/.env`:
+- `MERCADOPAGO_ACCESS_TOKEN` - Token de produção
+- `MERCADOPAGO_PUBLIC_KEY` - Chave pública
+- `RESPONDIO_API_TOKEN` - Token da API
+- `RESPONDIO_CHANNEL_ID` - ID do canal WhatsApp
+- `FRONTEND_URL` - https://barberhubpro.com.br
 
 ---
 
 ## Backlog
 
+### P0 - Crítico (Produção)
+- [x] ~~Configurar Mercado Pago produção~~ ✅
+- [x] ~~Desconto VIP no agendamento~~ ✅
+- [x] ~~WhatsApp de confirmação~~ ✅
+
 ### P1 - Importante
-- [ ] Configurar Evolution API para produção
-- [ ] Aplicar desconto automático para assinantes no agendamento
+- [ ] Cobrança recorrente automática (cartão salvo)
+- [ ] Página de histórico para o cliente final
+- [ ] Métricas avançadas (taxa de ocupação, etc.)
 
 ### P2 - Nice to Have
 - [ ] Integração Google Calendar
 - [ ] App mobile nativo
+- [ ] Sistema de avaliações
 
 ---
 
-*Última atualização: 27 Janeiro 2026*
+*Última atualização: 28 Janeiro 2026*
