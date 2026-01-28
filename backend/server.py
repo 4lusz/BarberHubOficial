@@ -2190,7 +2190,7 @@ async def process_recurring_billing():
                 # Get owner info
                 owner = await db.users.find_one({"barbershop_id": barbershop["barbershop_id"]}, {"_id": 0})
                 
-                if owner and (RESPONDIO_API_TOKEN and RESPONDIO_SPACE_ID and RESPONDIO_CHANNEL_ID):
+                if owner and (RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID):
                     # Send WhatsApp reminder about renewal
                     plan = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"))
                     try:
