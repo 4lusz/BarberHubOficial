@@ -1028,6 +1028,136 @@ async def create_simple_checkout(data: SubscriptionPayment, plan: dict, current_
         "recurring": False
     }
 
+@api_router.get("/subscription/info")
+async def get_subscription_info(current_user: dict = Depends(get_current_user)):
+    """Get subscription information for the current user"""
+    if current_user["role"] != "barber":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Get barbershop info
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Get subscription from database
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    
+    # Get last payment
+    last_payment = await db.payments.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0},
+        sort=[("created_at", -1)]
+    )
+    
+    plan_info = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"), SUBSCRIPTION_PLANS["comum"])
+    
+    return {
+        "plan": barbershop.get("plan", "comum"),
+        "plan_name": plan_info["name"],
+        "plan_price": plan_info["price"],
+        "status": barbershop.get("plan_status", "pending"),
+        "expires_at": barbershop.get("plan_expires_at"),
+        "auto_renew": barbershop.get("auto_renew", True),
+        "subscription": {
+            "mp_preapproval_id": subscription.get("mp_preapproval_id") if subscription else None,
+            "status": subscription.get("status") if subscription else None,
+            "created_at": subscription.get("created_at") if subscription else None
+        } if subscription else None,
+        "last_payment": {
+            "amount": last_payment.get("amount") if last_payment else None,
+            "date": last_payment.get("created_at") if last_payment else None,
+            "status": last_payment.get("status") if last_payment else None
+        } if last_payment else None
+    }
+
+@api_router.post("/subscription/cancel")
+async def cancel_subscription(current_user: dict = Depends(get_current_user)):
+    """Cancel the current subscription"""
+    if current_user["role"] != "barber":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Get subscription
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    
+    # If there's a Mercado Pago preapproval, try to cancel it
+    if subscription and subscription.get("mp_preapproval_id") and MERCADOPAGO_ACCESS_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client_http:
+                resp = await client_http.put(
+                    f"https://api.mercadopago.com/preapproval/{subscription['mp_preapproval_id']}",
+                    json={"status": "cancelled"},
+                    headers={
+                        "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                        "Content-Type": "application/json"
+                    }
+                )
+                if resp.status_code in [200, 201]:
+                    logger.info(f"Cancelled MP subscription {subscription['mp_preapproval_id']}")
+                else:
+                    logger.warning(f"Could not cancel MP subscription: {resp.status_code}")
+        except Exception as e:
+            logger.error(f"Error cancelling MP subscription: {str(e)}")
+    
+    # Update local subscription status
+    await db.subscriptions.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Update barbershop - keep access until expiration but mark as cancelled
+    await db.barbershops.update_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"$set": {"auto_renew": False}}
+    )
+    
+    # Send WhatsApp confirmation
+    user = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0})
+    if user and user.get("phone") and RESPONDIO_API_TOKEN:
+        barbershop = await db.barbershops.find_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"_id": 0}
+        )
+        expires_at = barbershop.get("plan_expires_at", "")
+        try:
+            from datetime import datetime as dt
+            exp_date = dt.fromisoformat(expires_at.replace('Z', '+00:00'))
+            exp_formatted = exp_date.strftime("%d/%m/%Y")
+        except:
+            exp_formatted = expires_at
+        
+        message = f"""📋 *Cancelamento de Assinatura*
+
+Sua assinatura do BarberHub foi cancelada conforme solicitado.
+
+Você continuará tendo acesso até: *{exp_formatted}*
+
+Caso mude de ideia, você pode reativar sua assinatura a qualquer momento pelo painel.
+
+Obrigado por usar o BarberHub! 💈"""
+        
+        await send_whatsapp_message(user["phone"], message)
+    
+    return {
+        "success": True,
+        "message": "Assinatura cancelada. Você terá acesso até o fim do período pago."
+    }
+
 @api_router.post("/webhooks/mercadopago")
 async def mercadopago_webhook(request: Request):
     """Handle Mercado Pago payment and subscription notifications"""
