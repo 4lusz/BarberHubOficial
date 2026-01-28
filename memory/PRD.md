@@ -207,4 +207,19 @@ O sistema normaliza automaticamente todos os números de telefone para o formato
 
 ---
 
+## Painel Super Admin
+
+Acesso exclusivo para o administrador da plataforma com visão completa de todas as barbearias e métricas.
+
+**URL:** `/super-admin`
+**Senha:** Configurada em `SUPER_ADMIN_PASSWORD`
+
+### Funcionalidades
+- **Visão Geral:** MRR, barbearias ativas, agendamentos, novos cadastros, churn
+- **Barbearias:** Lista com filtros, detalhes, ativar/desativar manualmente
+- **Financeiro:** Receita por plano, assinaturas ativas/falhas
+- **WhatsApp:** Relatório completo de todas as mensagens automáticas
+
+---
+
 *Última atualização: 28 Janeiro 2026*
