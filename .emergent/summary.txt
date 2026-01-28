@@ -7,53 +7,67 @@ O usuário solicitou a criação de um SaaS de agendamento completo para barbear
 -   **Conta do Barbeiro:** Cadastro com nome da barbearia, nome do responsável, email e senha, que cria um link público exclusivo para agendamento.
 -   **Planos Pagos:** Cadastro obrigatório em um plano (Comum ou Premium) com pagamento via Mercado Pago e cobrança recorrente.
 -   **Painel do Barbeiro (Admin):** Dashboard com agendamentos, gerenciamento de serviços, horários, profissionais, agenda visual, relatórios de faturamento e gerenciamento de Clientes VIP.
--   **Personalização:** Permitir que o dono da barbearia personalize as cores primária e de fundo do seu site público e gere um QR Code para o link.
--   **Localização:** Coletar a localização da barbearia no cadastro e exibi-la ao cliente (com link do Google Maps) no lembrete.
--   **Notificações via WhatsApp (Respond.io):** Enviar lembretes de agendamento 30 minutos antes e outras notificações (boas-vindas, lembrete de renovação).
+-   **Personalização:** Permitir que o dono da barbearia personalize a página pública com logo, banner, galeria, cores, fontes, texto Sobre Nós e redes sociais.
+-   **Localização:** Coletar a localização da barbearia no cadastro e exibi-la ao cliente (com link do Google Maps).
+-   **Notificações via WhatsApp (Respond.io):** Enviar confirmações de agendamento, lembretes 30 minutos antes e outras notificações transacionais.
 -   **Funcionalidades Adicionais:** Bloqueio manual de horários pelo administrador.
 -   **Clientes VIP:** Funcionalidade para o dono da barbearia (plano Premium) marcar clientes como VIP, oferecendo um desconto fixo nos agendamentos.
+-   **Área do Cliente:** Um portal para o cliente final visualizar seu histórico de agendamentos e status VIP.
+-   **Gerenciamento de Assinatura:** Uma página para o dono da barbearia gerenciar seu plano, método de pagamento e cancelar a assinatura.
 
 **User's preferred language**: Português (Brasil)
 
 **what currently exists?**
-Um aplicativo full-stack (React + FastAPI) chamado BarberHub. O fluxo principal de cadastro pago está implementado e funcional: o usuário se cadastra, seleciona um plano (Comum/Premium), preenche os dados da barbearia (incluindo localização), e é redirecionado para o checkout do Mercado Pago. O backend possui jobs agendados (APScheduler) para enviar lembretes de agendamento e verificar assinaturas expiradas. A integração de notificações via WhatsApp foi migrada de Twilio para Respond.io. A funcionalidade Planos de Clientes foi simplificada e implementada como Clientes VIP. O bug de personalização de cores foi corrigido.
+Um aplicativo full-stack (React + FastAPI) quase pronto para produção. O sistema suporta múltiplas barbearias com planos de assinatura (Comum/Premium) e cobrança recorrente automática via Mercado Pago (API de Preapproval, configurada para produção). A integração de notificações via WhatsApp com Respond.io está implementada, mas aguarda teste em produção. Foram implementadas funcionalidades avançadas de personalização da página pública (logo, banner com ajuste de posição, galeria, cores, etc.), uma área para clientes finais e uma página para o dono da barbearia gerenciar sua assinatura. Uma conta de demonstração premium () foi criada para testes. O sistema está sendo finalizado com a padronização de números de telefone para o formato brasileiro.
 
 **Last working item**:
--   **Last item agent was working:** O agente estava finalizando a migração de Twilio para Respond.io para as notificações via WhatsApp. As credenciais do Respond.io (token e channel ID) fornecidas pelo usuário foram adicionadas ao ambiente e o código foi adaptado para usar a nova API.
+-   **Last item agent was working:** Implementando a padronização automática e obrigatória de números de telefone para o formato brasileiro () para garantir a confiabilidade das notificações por WhatsApp. O agente criou uma função de normalização no backend e um novo componente de input no frontend (), e estava integrando-o na página de agendamento público.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent
+-   **Which testing method agent to use?** both
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-Nenhum problema pendente. As questões do fork anterior (fluxo de cadastro quebrado, bug de cores) foram resolvidas.
+-   **Issue 1:** Finalizar a padronização de números de telefone (P0)
+    -   **Attempted fixes:**
+        -   Backend: A função  foi criada em  para validar e formatar números.
+        -   Frontend: O componente reutilizável  foi criado para mascarar e validar o input em tempo real. Foi parcialmente integrado na .
+    -   **Next debug checklist:**
+        1.  Substituir todos os campos de input de telefone no frontend pelo novo componente . Arquivos a verificar: , , .
+        2.  Garantir que o valor normalizado seja enviado em todas as chamadas de API relevantes (criação de usuário, agendamento, cadastro de VIP, etc.).
+        3.  Revisar o backend para garantir que a função de normalização seja aplicada consistentemente antes de salvar no banco ou enviar mensagens via WhatsApp.
+        4.  Testar o fluxo de ponta a ponta com diferentes formatos de número para garantir que a validação e normalização funcionem como esperado.
+    -   **Why fix this issue and what will be achieved with the fix?** É um requisito crítico para que a funcionalidade de notificações por WhatsApp, uma parte central do produto, funcione de forma confiável em produção no Brasil.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1:** Testar a integração com Respond.io (P0)
-    -   **Where to resume:** O agente configurou as credenciais no arquivo  e adaptou a função  em . O próximo passo é invocar o endpoint de teste () para confirmar que uma mensagem é enviada com sucesso usando as novas credenciais.
-    -   **What will be achieved with this?** Validar que o sistema de notificações por WhatsApp está totalmente funcional com o provedor escolhido pelo usuário (Respond.io).
+-   **Task 1:** Concluir a integração da padronização de números de telefone (P0)
+    -   **Where to resume:** O agente terminou de integrar o componente  na . O próximo passo é replicar essa integração em todas as outras páginas onde um número de telefone é inserido.
+    -   **What will be achieved with this?** Padronização de todos os números de telefone do sistema, garantindo a integridade dos dados e o funcionamento das integrações que dependem deles.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on something:** None. As credenciais já foram fornecidas.
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   (P0) Aplicar o desconto de Cliente VIP no momento do agendamento. Atualmente, o sistema permite marcar clientes como VIP, mas o desconto não é aplicado no fluxo de agendamento público.
 -   **Future Tasks:**
-    -   (P1) Implementar a cobrança recorrente automática. Atualmente, o sistema envia um lembrete de renovação via WhatsApp, mas o usuário precisa renovar manualmente. O próximo passo seria usar a API do Mercado Pago para tentar uma cobrança automática no cartão salvo.
-    -   (P1) Aprimorar a página de Relatórios com mais gráficos e métricas, como taxa de ocupação, clientes novos vs. recorrentes, etc.
-    -   (P2) Criar uma área de cliente final (opcional) onde eles possam ver seu histórico de agendamentos, status de VIP e gerenciar seus dados.
+    -   (P1) Implementar um programa de fidelidade visível na página pública (ex: após X cortes, ganhe 1 grátis).
+    -   (P1) Aprimorar a página de Relatórios com mais gráficos e métricas (ex: taxa de ocupação, clientes novos vs. recorrentes).
+    -   (P2) Permitir que o cliente escolha o profissional pelo seu perfil (com foto e bio).
 
 **Completed work in this session**
 -   **List of all completed tasks with file and method name:**
-    -   Sincronização do frontend com o backend para implementar o fluxo de cadastro pago (, , ).
-    -   Criação de novas páginas para o fluxo de pagamento (, , ).
-    -   Implementação de jobs agendados com  para envio de lembretes e verificação de assinaturas ().
-    -   Integração inicial com Twilio e posterior migração para **Respond.io** para envio de notificações por WhatsApp ().
-    -   Criação de endpoints e página de Relatórios de faturamento (, ).
-    -   Refatoração da funcionalidade Planos de Clientes para um sistema simplificado de Clientes VIP (, ).
-    -   Correção do bug que impedia a aplicação de cores personalizadas na página pública de agendamento ().
-    -   Adição da localização da barbearia (com link do Google Maps) nos lembretes de agendamento via WhatsApp ().
+    -   **Pagamentos para Produção:** Migração do Mercado Pago para a API de Preapproval (assinaturas recorrentes) com chaves de produção. ()
+    -   **Gerenciamento de Assinatura:** Criação da página Minha Assinatura para o dono da barbearia gerenciar seu plano, com endpoints de backend para cancelamento e visualização. (, )
+    -   **Personalização Avançada:** Implementação de upload de logo, banner (com ajuste de posição), galeria de imagens, texto Sobre Nós, redes sociais e seleção de fontes. (, , )
+    -   **Correção de Bug de Imagem:** Resolvido o problema de imagens quebradas usando URLs relativas para os uploads. (, )
+    -   **Implementação do Desconto VIP:** Lógica aplicada no fluxo de agendamento público com verificação automática por telefone. (, )
+    -   **Criação de Conta Demo:** Adicionado endpoint e script para criar uma conta premium de teste sem pagamento. ()
+    -   **Melhoria na Área do Cliente:** A página foi aprimorada para mostrar o status VIP do cliente. ()
+    -   **Limpeza do Projeto:** Remoção de textos de teste grátis da Landing Page e limpeza de dependências de ML não utilizadas do .
+    -   **Validação de Webhooks:** Simulação de notificações do Mercado Pago para confirmar que o endpoint do webhook está funcionando.
 
 **Earlier issues found/mentioned but not fixed**
 -   Nenhum.
@@ -68,78 +82,78 @@ Nenhum problema pendente. As questões do fork anterior (fluxo de cadastro quebr
 -   **Backend:** FastAPI, Python, MongoDB, APScheduler
 -   **Frontend:** React, Tailwind CSS
 -   **Autenticação:** JWT (JSON Web Tokens)
--   **Integrações:** Mercado Pago (Pagamentos), Respond.io (WhatsApp)
+-   **Integrações:** Mercado Pago (API de Assinaturas/Preapproval), Respond.io (WhatsApp)
 
 **key DB schema**
--   : {user_id, name, email, hashed_password, plan_id, subscription_status, barbershop_id}
--   : {barbershop_id, owner_id, name, slug, location: {lat, lng}, custom_colors: {primary, background}, plan_status: active | pending}
--   : {appointment_id, barbershop_id, client_name, client_phone, service_id, date, time, status, reminder_sent}
--   : {subscription_id, user_id, plan_id, mp_subscription_id, status, start_date, end_date}
--   : {vip_id, barbershop_id, client_name, client_phone, discount_percentage}
+-   : {..., slug, **logo_url**, **banner_url**, **banner_position**, **gallery_images**, **about_us**, **social_links**, **font_style**, custom_colors, plan_status}
+-   : {..., **mp_preapproval_id**, status, auto_renew}
 
 **changes in tech stack**
--   **Removido:** Twilio
--   **Adicionado:**  para jobs em background, Respond.io para WhatsApp.
+-   Nenhuma.
 
 **All files of reference**
--   : Arquivo monolítico do backend. Contém toda a lógica, incluindo as novas integrações (Respond.io), endpoints (VIP Clients, Reports) e schedulers.
--   : Página pública onde o bug das cores foi corrigido.
--   : Nova página para gerenciar clientes VIP (substituiu ).
--   : Arquivo de rotas, atualizado com a nova página .
--   : Menu lateral, atualizado com o link para Clientes VIP.
--   : Arquivo de ambiente atualizado com as chaves do Respond.io e remoção das chaves do Twilio.
+-   : Arquivo monolítico atualizado com endpoints de personalização (uploads), gerenciamento de assinatura e função de normalização de telefone.
+-   : Novo componente de frontend para input de telefone.
+-   : Atualizada para incluir as novas personalizações visuais e o novo componente de telefone.
+-   : Totalmente reformulada para incluir as novas opções de personalização (logo, banner, galeria, etc.).
+-   : Nova página para o dono da barbearia gerenciar seu plano.
+-   : Atualizado com a rota para a .
+-   : Adicionada função  para construir URLs de imagem corretamente.
 
 **Areas that need refactoring**:
--   O arquivo  continua sendo um monolito. Uma refatoração para dividir a lógica em , , e  melhoraria drasticamente a manutenibilidade do projeto.
+-   O arquivo monolítico  segue sendo o principal ponto de débito técnico. A separação da lógica em ,  e  continua sendo uma melhoria importante para o futuro.
 
 **key api endpoints**
--   
--   
--    (Verifica status dos schedulers e integrações)
--    (Endpoint para testar envio de mensagem)
--   
--    (CRUD para clientes VIP)
--    (Para salvar as cores customizadas)
--    (Para buscar dados da barbearia na página pública)
+-   : Cria a assinatura recorrente no Mercado Pago.
+-   : Retorna o status da assinatura do usuário.
+-   : Cancela a assinatura no Mercado Pago.
+-   : Recebe notificações do Mercado Pago (pagamentos, assinaturas).
+-   : Endpoint para upload de logo.
+-   : Endpoint para upload de banner.
+-   : Endpoint para upload de imagens da galeria.
+-   : Atualiza as configurações da barbearia, incluindo as novas personalizações.
+-   : Endpoint para criar a conta de teste.
 
 **Critical Info for New Agent**
--   A decisão foi simplificar os Planos de Clientes para uma funcionalidade de Clientes VIP mais direta, que já está implementada no backend e frontend.
--   A integração de WhatsApp foi completamente migrada de Twilio para Respond.io. As credenciais do usuário já estão no . A principal tarefa pendente é testar se o envio de mensagens está funcionando com essas credenciais.
--   O job de cobrança recorrente () apenas envia um lembrete para o usuário renovar, ele **não** realiza a cobrança automática. Isso foi uma decisão de implementação para simplificar o fluxo inicial.
+-   **Modo Produção:** O aplicativo está configurado para o ambiente de produção, especialmente o Mercado Pago, que usa chaves reais.
+-   **Teste do WhatsApp:** A integração com Respond.io está codificada, mas **não foi testada em um ambiente real** porque a conta do usuário não tinha saldo. A finalização da tarefa de normalização de telefone é o último passo antes de poder validar essa funcionalidade.
+-   **Configuração do Webhook:** O usuário deve ser lembrado de que, após o deploy, precisará configurar a URL de webhook  em seu painel do Mercado Pago para que a ativação de planos e a gestão de assinaturas funcionem automaticamente.
+-   **URLs de Imagem:** O sistema agora usa URLs relativas () para as imagens. O frontend é responsável por construir a URL completa usando o .
 
 **documents and test reports created in this job**
--    (Atualizado múltiplas vezes)
+-    (Atualizado)
+-   
 -   
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. : Usuário fornece o token e o channel ID do Respond.io. (CONCLUÍDO)
-9.  : Usuário aprova a simplificação para Cliente VIP e solicita a remoção total do Twilio, pedindo a adaptação do código para Respond.io. (EM ANDAMENTO)
-8.  : Agente pergunta ao usuário sobre a configuração do Twilio oficial (não-sandbox). (RESPONDIDO)
-7.  : Usuário pede para continuar a correção das cores e integrar o Twilio oficial. (CONCLUÍDO/EM ANDAMENTO)
-6.  : Usuário pede para corrigir o bug das cores e recomenda simplificar os planos para Clientes VIP. Esclarece o número correto do WhatsApp no sandbox Twilio. (CONCLUÍDO)
-5.  : Usuário informa que a mudança de cores não está funcionando e que o sistema de planos para clientes não é prático sem contas de cliente. Fornece uma imagem do seu sandbox Twilio. (EM ANDAMENTO)
-4.  : Usuário informa que não recebeu a mensagem no WhatsApp (devido a um erro de digitação no número) e pede credenciais de uma conta premium para testar o painel. (CONCLUÍDO)
-3.  : Usuário dá o OK para a opção A (simplificar para clientes VIP) e pede para remover a Evolution API, testar o WhatsApp com o número correto (+55) e garantir que a localização da barbearia seja enviada no lembrete. (EM ANDAMENTO)
-2.  : Usuário questiona a lógica da cobrança recorrente, aponta a limitação do Twilio Sandbox para produção, sugere remover a função de planos para clientes e informa o número de telefone correto (+55) para teste. (EM ANDAMENTO)
-1.  : Usuário pergunta se a Evolution API é confiável e, se sim, aprova seu uso. (CONCLUÍDO - posteriormente descartado)
+10. : O agente conclui a integração do campo de telefone na página de agendamento e está prestes a continuar nas outras páginas. (CONCLUÍDO)
+9.  : O agente implementa a função de normalização no backend, cria o componente  no frontend e começa a integrá-lo na . (EM ANDAMENTO)
+8.  : Usuário aprova a Opção A (padronização automática com DDD obrigatório) para a normalização dos números de telefone e pede para o agente implementar. (EM ANDAMENTO)
+7.  : Agente explica a importância de padronizar os números de telefone para o WhatsApp e propõe duas soluções, recomendando a padronização automática. (RESPONDIDO)
+6.  : Usuário levanta uma preocupação crítica sobre a formatação dos números de telefone no Brasil para o funcionamento do WhatsApp. (RESPONDIDO)
+5.  : Agente fornece um resumo completo e detalhado de todas as funcionalidades do sistema BarberHub. (RESPONDIDO)
+4.  : Usuário solicita um resumo completo de todas as funcionalidades do BarberHub. (RESPONDIDO)
+3.  : Usuário pergunta se existe uma área para gerenciar a assinatura. O agente confirma que não, implementa a página Minha Assinatura de ponta a ponta e a valida. (CONCLUÍDO)
+2.  : Agente simula notificações de webhook do Mercado Pago (, , ) para validar que o endpoint está recebendo e processando as requisições. (CONCLUÍDO)
+1.  : Usuário pede para simular um pagamento falso para verificar se o webhook está funcionando. (EM ANDAMENTO)
 
 **Project Health Check:**
 -   **Broken:** Nada está quebrado.
--   **Mocked:** A integração com Respond.io está configurada, mas o envio de mensagens com as chaves do usuário ainda não foi validado. O Mercado Pago está funcional, mas usando chaves de sandbox.
+-   **Mocked:** As notificações via WhatsApp (Respond.io) estão implementadas, mas não foram testadas em produção, pois a conta do usuário não possui saldo. O funcionamento depende da correta implementação da normalização de telefone e da adição de saldo pelo usuário.
 
 **3rd Party Integrations**
--   **Mercado Pago (Payments):** Requer Access Token de sandbox do usuário (já configurado).
--   **Respond.io (WhatsApp):** Requer API Token e Channel ID do usuário (já configurados).
--   **Resend (Email):** Configurado, mas as notificações por email foram despriorizadas pelo usuário em favor do WhatsApp.
+-   **Mercado Pago (Payments):** Integrado com a API de Assinaturas (Preapproval) usando chaves de **produção**.
+-   **Respond.io (WhatsApp):** Configurado com chaves de produção, mas aguardando teste real.
 
 **Testing status**
 -   **Testing agent used after significant changes:** YES
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** []
--   **Known regressions:** Nenhum. A regressão do fluxo de cadastro foi corrigida.
+-   **Test files created:** [, ]
+-   **Known regressions:** Nenhum.
 
 **Credentials to test flow:**
-As credenciais para Mercado Pago e Respond.io já foram fornecidas pelo usuário e estão no arquivo . Não é necessário solicitá-las novamente.
+As credenciais necessárias para Mercado Pago (produção) e Respond.io estão nos arquivos . Não é necessário solicitá-las novamente ao usuário. A conta  pode ser usada para testar funcionalidades do plano premium.
 
 **What agent forgot to execute**
--   A refatoração planejada do arquivo monolítico  ainda está pendente.</analysis>
+-   A tarefa de padronização de telefone está incompleta. O novo componente  precisa ser aplicado em todas as páginas que coletam números de telefone, não apenas na página de agendamento público.
+-   A refatoração do monolito  continua como um débito técnico a ser tratado no futuro.</analysis>
