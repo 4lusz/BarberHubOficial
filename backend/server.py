@@ -1559,6 +1559,30 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     if not slot_available:
         raise HTTPException(status_code=400, detail="Horário não disponível")
     
+    # Get barbershop for VIP check and notifications
+    barbershop = await db.barbershops.find_one({"barbershop_id": data.barbershop_id}, {"_id": 0})
+    
+    # Check if client is VIP and calculate discount
+    original_price = service["price"]
+    final_price = original_price
+    discount_percentage = 0
+    is_vip = False
+    
+    # Only check VIP if barbershop has premium plan
+    if barbershop and barbershop.get("plan") == "premium":
+        clean_phone = ''.join(filter(str.isdigit, data.client_phone))
+        vip_client = await db.vip_clients.find_one({
+            "barbershop_id": data.barbershop_id,
+            "client_phone": {"$regex": clean_phone},
+            "active": True
+        }, {"_id": 0})
+        
+        if vip_client:
+            is_vip = True
+            discount_percentage = vip_client.get("discount_percentage", 0)
+            final_price = original_price * (1 - discount_percentage / 100)
+            logger.info(f"VIP discount applied: {discount_percentage}% for {data.client_phone}")
+    
     appointment_id = generate_id("apt")
     apt_doc = {
         "appointment_id": appointment_id,
@@ -1575,13 +1599,34 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
         "notes": data.notes,
         "status": "pending",
         "reminder_sent": False,
+        "original_price": original_price,
+        "final_price": final_price,
+        "discount_percentage": discount_percentage,
+        "is_vip": is_vip,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.appointments.insert_one(apt_doc)
     
-    # Get barbershop for response and notifications
-    barbershop = await db.barbershops.find_one({"barbershop_id": data.barbershop_id}, {"_id": 0})
+    # Send WhatsApp confirmation
+    if barbershop:
+        try:
+            await send_whatsapp_booking_confirmation(
+                phone=data.client_phone,
+                client_name=data.client_name,
+                barbershop_name=barbershop["name"],
+                service_name=service["name"],
+                date=data.date,
+                time=data.time,
+                original_price=original_price,
+                final_price=final_price,
+                discount_percentage=discount_percentage,
+                address=barbershop.get("address"),
+                latitude=barbershop.get("latitude"),
+                longitude=barbershop.get("longitude")
+            )
+        except Exception as e:
+            logger.error(f"Failed to send WhatsApp confirmation: {str(e)}")
     
     # Send email notification
     if data.client_email and barbershop:
@@ -1592,6 +1637,14 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
                 maps_url = f"https://www.google.com/maps?q={barbershop['latitude']},{barbershop['longitude']}"
                 address_html += f'<p style="margin: 5px 0;"><a href="{maps_url}" style="color: #F59E0B;">Ver no Google Maps</a></p>'
         
+        # Show discount in email if VIP
+        price_html = f'<p style="color: #fff; margin: 5px 0;"><strong>Valor:</strong> R$ {final_price:.2f}</p>'
+        if is_vip:
+            price_html = f'''
+                <p style="color: #fff; margin: 5px 0;"><strong>Valor original:</strong> <s>R$ {original_price:.2f}</s></p>
+                <p style="color: #F59E0B; margin: 5px 0;"><strong>🌟 Desconto VIP ({discount_percentage}%):</strong> R$ {final_price:.2f}</p>
+            '''
+        
         html_content = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #F59E0B;">Agendamento Confirmado!</h2>
@@ -1601,7 +1654,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
                 <p style="color: #fff; margin: 5px 0;"><strong>Serviço:</strong> {service['name']}</p>
                 <p style="color: #fff; margin: 5px 0;"><strong>Data:</strong> {data.date}</p>
                 <p style="color: #fff; margin: 5px 0;"><strong>Horário:</strong> {data.time}</p>
-                <p style="color: #fff; margin: 5px 0;"><strong>Valor:</strong> R$ {service['price']:.2f}</p>
+                {price_html}
                 {address_html}
             </div>
             <p style="color: #666;">Obrigado por escolher a {barbershop['name']}!</p>
@@ -1614,8 +1667,9 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
             html_content
         )
     
-    # Return appointment with barbershop location
+    # Return appointment with barbershop location and VIP info
     apt_response = {k: v for k, v in apt_doc.items() if k != "_id"}
+    apt_response["service_name"] = service["name"]
     if barbershop:
         apt_response["barbershop_name"] = barbershop["name"]
         apt_response["barbershop_address"] = barbershop.get("address")
