@@ -1417,11 +1417,9 @@ async def upload_barbershop_image(
         logger.error(f"Upload error: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao salvar arquivo")
     
-    # Generate URL
-    base_url = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-    if not base_url:
-        base_url = os.environ.get('FRONTEND_URL', 'https://barberhubpro.com.br').replace('https://', 'https://').rstrip('/')
-    image_url = f"{base_url}/api/uploads/{folder_map[upload_type]}/{filename}"
+    # Generate URL - use relative path that works in any environment
+    # The frontend will prepend the correct base URL
+    image_url = f"/api/uploads/{folder_map[upload_type]}/{filename}"
     
     # Update barbershop if logo or banner
     if upload_type in ["logo", "banner"]:
