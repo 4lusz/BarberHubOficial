@@ -44,6 +44,9 @@ export default function PublicBookingPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successData, setSuccessData] = useState(null);
+  const [vipInfo, setVipInfo] = useState({ is_vip: false, discount_percentage: 0 });
+  const [checkingVip, setCheckingVip] = useState(false);
 
   // Get custom colors from barbershop
   const primaryColor = data?.barbershop?.primary_color || '#F59E0B';
