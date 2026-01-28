@@ -37,4 +37,15 @@ api.interceptors.response.use(
   }
 );
 
+// Helper to get full image URL from relative path
+export const getImageUrl = (path) => {
+  if (!path) return null;
+  // If it's already a full URL, return as-is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // Otherwise, prepend the backend URL
+  return `${BACKEND_URL}${path}`;
+};
+
 export default api;
