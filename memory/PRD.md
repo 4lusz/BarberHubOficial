@@ -13,11 +13,18 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Cadastro/Login de Barbeiro (JWT + Google OAuth)
 - [x] Fluxo de cadastro pago obrigatório
 - [x] Coleta de localização (GPS)
-- [x] Redirecionamento para seleção de plano após cadastro
+- [x] Área do cliente final com histórico
 
-### Barbearia
-- [x] Link público único (/b/{slug})
-- [x] Cores personalizadas (primária + fundo)
+### Barbearia - Personalização Avançada
+- [x] **Logo personalizado** - Upload de imagem
+- [x] **Banner/Imagem de capa** - Upload de imagem
+- [x] **Galeria de trabalhos** - Múltiplas imagens
+- [x] **3 estilos de fonte** - Moderna, Clássica, Bold
+- [x] **Cores personalizadas** - Primária e fundo
+- [x] **Texto "Sobre Nós"** - Descrição completa
+- [x] **Redes sociais** - Instagram, Facebook, WhatsApp
+- [x] **Horário de funcionamento** - Exibido na página
+- [x] **Mapa interativo** - Link direto para Google Maps
 - [x] QR Code para compartilhamento
 
 ### Serviços e Profissionais
@@ -26,47 +33,34 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Bloqueios manuais de horários
 
 ### Agendamentos
-- [x] Página pública de agendamento
+- [x] Página pública de agendamento (personalizada)
 - [x] Dashboard com estatísticas
 - [x] Agenda visual
-- [x] **Desconto VIP automático** (verificado pelo telefone)
+- [x] **Desconto VIP automático**
+- [x] Confirmação via WhatsApp
 
-### Pagamentos - Mercado Pago
+### Pagamentos - Mercado Pago (PRODUÇÃO)
 - [x] Planos Comum (R$49,90) e Premium (R$99,90)
-- [x] **Integração Mercado Pago PRODUÇÃO** ✅
-- [x] Endpoint de renovação
-- [x] Webhook para confirmação de pagamento
-- [x] URLs de callback configuradas para `barberhubpro.com.br`
-- [x] Lembretes de renovação 3 dias antes (via WhatsApp)
+- [x] **Cobrança recorrente automática** (API Preapproval)
+- [x] Webhook para notificações de pagamento
+- [x] Alertas de falha no pagamento via WhatsApp
+- [x] Lembretes de renovação 3 dias antes
 
 ### Notificações WhatsApp - Respond.io
-- [x] **Integração Respond.io** ✅ (API configurada)
-- [x] Confirmação automática ao criar agendamento
-- [x] Lembretes automáticos 30 min antes
-- [x] Notificações incluem localização (Google Maps)
-- [x] Mensagens com desconto VIP (quando aplicável)
+- [x] Confirmação automática de agendamento
+- [x] Lembretes 30 min antes
+- [x] Notificações de renovação/falha de pagamento
+- [x] Localização (Google Maps) incluída
 
 ### Relatórios (Premium)
-- [x] Relatório diário (todos os planos)
-- [x] Relatório semanal (Premium)
-- [x] Faturamento por serviço/horário/profissional (Premium)
-- [x] Top clientes (Premium)
-- [x] **Bloqueio correto** - usuários plano Comum recebem 403
+- [x] Relatório diário/semanal
+- [x] Faturamento por serviço/horário/profissional
+- [x] Top clientes
 
 ### Clientes VIP (Premium)
-- [x] Cadastrar clientes como VIP
-- [x] Definir percentual de desconto por cliente
-- [x] **Desconto aplicado automaticamente no agendamento**
-- [x] Verificação VIP no frontend (ao digitar telefone)
-- [x] WhatsApp de boas-vindas ao tornar-se VIP
-- [x] **Bloqueio correto** - usuários plano Comum recebem 403
-
-### Área do Cliente Final
-- [x] Login por telefone + senha
-- [x] Histórico de agendamentos (próximos, passados, cancelados)
-- [x] Visualização de status VIP
-- [x] Descontos em múltiplas barbearias
-- [x] Cancelamento de agendamentos
+- [x] Cadastro de clientes VIP
+- [x] Desconto automático no agendamento
+- [x] Badge VIP na página pública
 
 ---
 
@@ -78,161 +72,115 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - Agenda digital organizada
 - Cadastro de serviços e profissionais
 - Configuração de horários
-- Link público para clientes
-- Confirmação automática de agendamentos
-- Acesso pelo celular ou computador
+- **Personalização completa da página**
+- Link público + QR Code
+- Confirmação automática (WhatsApp)
 
 ### Plano Premium (R$99,90/mês)
 - Tudo do Plano Comum +
 - Relatórios de faturamento
-- Lucro por profissional
-- Lucro por horário de atendimento
-- Estatísticas de horários mais vendidos
-- Histórico financeiro da barbearia
-- Gestão avançada de clientes
+- Lucro por profissional/horário
+- Estatísticas avançadas
+- Histórico financeiro
 - **Criação de clientes VIP com desconto**
 - Controle de clientes recorrentes
 - Prioridade em novas funcionalidades
 
 ---
 
+## Personalização da Página Pública
+
+### Visual
+| Recurso | Descrição |
+|---------|-----------|
+| Logo | Upload de imagem (200x200px) |
+| Banner | Imagem de capa (1200x400px) |
+| Cores | Primária + Fundo (hex) |
+| Fonte | Moderna, Clássica ou Bold |
+
+### Informações
+| Recurso | Descrição |
+|---------|-----------|
+| Sobre Nós | Texto descritivo longo |
+| Endereço | Com link para Google Maps |
+| Telefone | Clicável para ligar |
+| Horários | Exibido na seção "Sobre" |
+
+### Galeria
+- Upload de múltiplas imagens
+- Visualização em modal com navegação
+- Preview horizontal na página
+
+### Redes Sociais
+- Instagram (link)
+- Facebook (link)
+- WhatsApp (botão flutuante)
+
+---
+
 ## Conta Demo Premium
 
-**Credenciais de acesso:**
+**Credenciais:**
 - Email: `demo@barberhubpro.com.br`
 - Senha: `Demo@2024`
-- URL pública: `barberhubpro.com.br/b/demo-premium`
-
-**Dados de teste:**
-- 5 serviços cadastrados
-- 2 profissionais
-- 1 cliente VIP (telefone: +5511966666666, desconto: 15%)
+- URL: `barberhubpro.com.br/b/demo-premium`
 
 ---
 
-## Jobs Automáticos (APScheduler)
+## APIs de Personalização
 
-| Job | Intervalo | Função |
-|-----|-----------|--------|
-| Lembretes WhatsApp | 5 min | Envia 30 min antes do horário |
-| Verificar expiração | 1 hora | Desativa planos expirados |
-| Aviso de renovação | 12 horas | Lembra 3 dias antes da expiração |
+```
+POST /api/barbershops/upload/logo     - Upload de logo
+POST /api/barbershops/upload/banner   - Upload de banner
+POST /api/barbershops/upload/gallery  - Adicionar imagem à galeria
+DELETE /api/barbershops/gallery       - Remover imagem da galeria
+PUT /api/barbershops                  - Atualizar dados e personalização
+```
 
 ---
 
-## Integrações Configuradas
+## Arquitetura de Uploads
+
+```
+/app/backend/uploads/
+├── logos/       # Logos das barbearias
+├── banners/     # Banners/capas
+└── gallery/     # Imagens da galeria
+```
+
+URLs servidas em: `/api/uploads/{tipo}/{arquivo}`
+
+---
+
+## Integrações
 
 | Serviço | Status | Modo |
 |---------|--------|------|
-| Mercado Pago | ✅ Ativo | **PRODUÇÃO** |
-| Respond.io (WhatsApp) | ✅ Configurado | Produção |
-| Resend (Email) | ✅ Ativo | Produção |
-
----
-
-## APIs Principais
-
-### Públicas
-- `GET /api/plans` - Lista planos
-- `GET /api/barbershops/public/{slug}` - Dados da barbearia
-- `GET /api/vip-clients/check/{phone}?barbershop_id=X` - Verifica VIP
-- `POST /api/appointments` - Cria agendamento (aplica desconto VIP)
-- `GET /api/appointments/availability/{barbershop_id}` - Horários disponíveis
-
-### Autenticadas (Barbeiro)
-- `POST /api/auth/{register, login}` - Autenticação
-- `POST /api/subscription/create` - Criar assinatura (Mercado Pago)
-- `POST /api/subscription/renew` - Renovar assinatura
-- `GET /api/barbershops/me` - Dados da minha barbearia
-- `GET /api/services` - Listar serviços
-- `GET /api/professionals` - Listar profissionais
-- `GET /api/appointments` - Listar agendamentos
-- `GET /api/dashboard/stats` - Estatísticas do dashboard
-- `GET /api/reports/daily` - Relatório diário (todos)
-- `GET /api/reports/weekly` - Relatório semanal (Premium)
-- `GET /api/reports/revenue` - Relatório de faturamento (Premium)
-- `GET /api/vip-clients` - Lista VIPs (Premium)
-- `POST /api/vip-clients` - Adiciona VIP (Premium)
-
-### Autenticadas (Cliente)
-- `POST /api/auth/client/{register, login}` - Autenticação cliente
-- `GET /api/appointments/client` - Meus agendamentos
-- `GET /api/client/profile` - Perfil com status VIP
-
----
-
-## Credenciais de Produção
-
-Todas as credenciais estão no arquivo `/app/backend/.env`:
-- `MERCADOPAGO_ACCESS_TOKEN` - Token de produção
-- `MERCADOPAGO_PUBLIC_KEY` - Chave pública
-- `RESPONDIO_API_TOKEN` - Token da API
-- `RESPONDIO_CHANNEL_ID` - ID do canal WhatsApp
-- `FRONTEND_URL` - https://barberhubpro.com.br
-
----
-
-## Arquitetura
-
-```
-/app/
-├── backend/
-│   ├── .env                    # Credenciais de produção
-│   ├── requirements.txt
-│   ├── server.py               # FastAPI monolítico
-│   └── tests/
-│       └── test_barberhub_e2e.py
-├── frontend/
-│   ├── .env
-│   ├── package.json
-│   └── src/
-│       ├── App.js              # Rotas
-│       ├── components/
-│       │   └── layouts/DashboardLayout.js
-│       ├── contexts/AuthContext.js
-│       ├── lib/api.js
-│       └── pages/
-│           ├── AgendaPage.js
-│           ├── BusinessHoursPage.js
-│           ├── ClientAreaPage.js       # Área do cliente
-│           ├── Dashboard.js
-│           ├── LandingPage.js
-│           ├── LoginPage.js
-│           ├── PaymentPage.js
-│           ├── PaymentSuccessPage.js
-│           ├── ProfessionalsPage.js
-│           ├── PublicBookingPage.js    # Agendamento público
-│           ├── RegisterPage.js
-│           ├── ReportsPage.js          # Premium
-│           ├── SelectPlanPage.js
-│           ├── ServicesPage.js
-│           ├── SettingsPage.js
-│           ├── TimeBlocksPage.js
-│           └── VipClientsPage.js       # Premium
-└── memory/
-    └── PRD.md
-```
+| Mercado Pago | ✅ | PRODUÇÃO (Recorrente) |
+| Respond.io | ✅ | Produção |
+| Resend (Email) | ✅ | Produção |
 
 ---
 
 ## Backlog
 
 ### P0 - Concluído ✅
-- [x] Mercado Pago produção
-- [x] Desconto VIP automático
-- [x] WhatsApp confirmação/lembretes
-- [x] Área do cliente final
-- [x] Validação E2E completa
+- [x] Mercado Pago produção com cobrança recorrente
+- [x] Personalização visual (logo, banner, cores, fonte)
+- [x] Galeria de trabalhos
+- [x] Informações enriquecidas (mapa, horários, sobre)
+- [x] Redes sociais na página pública
 
 ### P1 - Melhorias Futuras
-- [ ] Cobrança recorrente automática (cartão salvo)
-- [ ] Refatorar backend em módulos (models/, routes/, services/)
-- [ ] Métricas avançadas (taxa de ocupação, etc.)
+- [ ] Refatorar backend em módulos
+- [ ] Métricas avançadas (taxa de ocupação)
+- [ ] Push notifications
 
 ### P2 - Nice to Have
 - [ ] Integração Google Calendar
 - [ ] App mobile nativo
 - [ ] Sistema de avaliações
+- [ ] Programa de fidelidade
 
 ---
 
