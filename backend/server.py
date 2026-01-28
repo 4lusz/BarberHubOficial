@@ -616,7 +616,7 @@ async def trigger_subscription_check(background_tasks: BackgroundTasks):
 @api_router.post("/tasks/test-whatsapp")
 async def test_whatsapp_notification(phone: str):
     """Test WhatsApp notification - for debugging"""
-    if not RESPONDIO_API_TOKEN or not RESPONDIO_SPACE_ID or not RESPONDIO_CHANNEL_ID:
+    if not RESPONDIO_API_TOKEN or not RESPONDIO_CHANNEL_ID:
         return {"success": False, "error": "No WhatsApp provider configured (Respond.io)"}
     
     try:
