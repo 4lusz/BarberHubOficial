@@ -1450,8 +1450,55 @@ async def get_client_appointments(current_user: dict = Depends(get_current_user)
         service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
         if service:
             apt["service_name"] = service["name"]
+            apt["service_price"] = service["price"]
     
     return appointments
+
+@api_router.get("/client/profile")
+async def get_client_profile(current_user: dict = Depends(get_current_user)):
+    """Get client profile with VIP status across barbershops"""
+    if current_user["role"] != "client":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    phone = current_user.get("phone", "")
+    clean_phone = ''.join(filter(str.isdigit, phone))
+    
+    # Find VIP statuses across barbershops
+    vip_statuses = []
+    if clean_phone:
+        vip_entries = await db.vip_clients.find({
+            "client_phone": {"$regex": clean_phone},
+            "active": True
+        }, {"_id": 0}).to_list(100)
+        
+        for vip in vip_entries:
+            barbershop = await db.barbershops.find_one(
+                {"barbershop_id": vip["barbershop_id"]},
+                {"_id": 0, "name": 1, "slug": 1}
+            )
+            if barbershop:
+                vip_statuses.append({
+                    "barbershop_name": barbershop["name"],
+                    "barbershop_slug": barbershop["slug"],
+                    "discount_percentage": vip["discount_percentage"]
+                })
+    
+    # Count appointments
+    total_appointments = await db.appointments.count_documents({
+        "client_id": current_user["user_id"]
+    })
+    completed_appointments = await db.appointments.count_documents({
+        "client_id": current_user["user_id"],
+        "status": "completed"
+    })
+    
+    return {
+        "user": {k: v for k, v in current_user.items() if k != "password"},
+        "vip_statuses": vip_statuses,
+        "is_vip_anywhere": len(vip_statuses) > 0,
+        "total_appointments": total_appointments,
+        "completed_appointments": completed_appointments
+    }
 
 @api_router.get("/appointments/availability/{barbershop_id}")
 async def get_availability(
