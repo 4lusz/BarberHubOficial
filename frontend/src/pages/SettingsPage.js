@@ -435,12 +435,52 @@ export default function SettingsPage() {
               <div>
                 <Label className="mb-2 block">Banner / Imagem de Capa</Label>
                 {barbershop?.banner_url ? (
-                  <div className="relative">
-                    <img 
-                      src={getImageUrl(barbershop.banner_url)} 
-                      alt="Banner" 
-                      className="w-full h-40 object-cover rounded-lg border border-border"
-                    />
+                  <div className="space-y-3">
+                    {/* Banner Preview with Position */}
+                    <div 
+                      className="relative w-full h-40 rounded-lg border border-border overflow-hidden"
+                      style={{
+                        backgroundImage: `url(${getImageUrl(barbershop.banner_url)})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: barbershop?.banner_position === 'top' ? 'top' 
+                          : barbershop?.banner_position === 'bottom' ? 'bottom' 
+                          : 'center'
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+                      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        Preview
+                      </div>
+                    </div>
+                    
+                    {/* Position Controls */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Posição:</span>
+                      {[
+                        { id: 'top', label: 'Topo' },
+                        { id: 'center', label: 'Centro' },
+                        { id: 'bottom', label: 'Baixo' }
+                      ].map(pos => (
+                        <Button
+                          key={pos.id}
+                          type="button"
+                          size="sm"
+                          variant={barbershop?.banner_position === pos.id || (!barbershop?.banner_position && pos.id === 'center') ? 'default' : 'outline'}
+                          onClick={async () => {
+                            try {
+                              const response = await api.put('/barbershops', { banner_position: pos.id });
+                              updateBarbershop(response.data);
+                              toast.success('Posição atualizada!');
+                            } catch (error) {
+                              toast.error('Erro ao atualizar posição');
+                            }
+                          }}
+                          data-testid={`banner-position-${pos.id}`}
+                        >
+                          {pos.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="w-full h-40 bg-secondary rounded-lg flex items-center justify-center border border-dashed border-border">
@@ -465,10 +505,10 @@ export default function SettingsPage() {
                   data-testid="upload-banner-button"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  {uploading.banner ? 'Enviando...' : 'Upload Banner'}
+                  {uploading.banner ? 'Enviando...' : barbershop?.banner_url ? 'Trocar Banner' : 'Upload Banner'}
                 </Button>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Recomendado: 1200x400px, PNG ou JPG
+                  Recomendado: 1200x400px ou maior (PNG, JPG). Ajuste a posição após o upload.
                 </p>
               </div>
             </CardContent>
