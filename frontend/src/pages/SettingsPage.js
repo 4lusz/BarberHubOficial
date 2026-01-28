@@ -628,7 +628,7 @@ export default function SettingsPage() {
                 {barbershop.gallery_images.map((url, index) => (
                   <div key={index} className="relative group aspect-square">
                     <img 
-                      src={url} 
+                      src={getImageUrl(url)} 
                       alt={`Trabalho ${index + 1}`}
                       className="w-full h-full object-cover rounded-lg border border-border"
                     />
