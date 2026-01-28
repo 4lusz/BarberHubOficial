@@ -97,6 +97,7 @@ export default function PublicBookingPage() {
     time: null,
     clientName: '',
     clientPhone: '',
+    clientPhoneNormalized: '',
     clientEmail: '',
   });
   const [availableSlots, setAvailableSlots] = useState([]);
