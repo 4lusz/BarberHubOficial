@@ -51,6 +51,9 @@ MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 RESPONDIO_API_TOKEN = os.environ.get('RESPONDIO_API_TOKEN', '')
 RESPONDIO_CHANNEL_ID = os.environ.get('RESPONDIO_CHANNEL_ID', '')
 
+# Super Admin Config
+SUPER_ADMIN_PASSWORD = os.environ.get('SUPER_ADMIN_PASSWORD', 'alunyx110205')
+
 # Initialize scheduler for background jobs
 scheduler = AsyncIOScheduler()
 
