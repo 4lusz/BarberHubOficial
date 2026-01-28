@@ -448,6 +448,51 @@ Olá! Você tem um horário marcado na *{barbershop_name}* em 30 minutos!
     
     return await send_whatsapp_message(phone, message_body)
 
+async def send_whatsapp_booking_confirmation(phone: str, client_name: str, barbershop_name: str,
+                                              service_name: str, date: str, time: str,
+                                              original_price: float, final_price: float,
+                                              discount_percentage: float = 0,
+                                              address: str = None, latitude: float = None,
+                                              longitude: float = None):
+    """Send WhatsApp confirmation when booking is created"""
+    # Format date for Brazilian format
+    try:
+        from datetime import datetime as dt
+        date_obj = dt.strptime(date, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%d/%m/%Y")
+    except:
+        formatted_date = date
+    
+    message_body = f"""✅ *Agendamento Confirmado!*
+
+Olá {client_name}! Seu horário na *{barbershop_name}* foi confirmado.
+
+✂️ Serviço: {service_name}
+📅 Data: {formatted_date}
+⏰ Horário: {time}"""
+    
+    # Show discount if VIP
+    if discount_percentage > 0:
+        message_body += f"""
+
+🌟 *Você é cliente VIP!*
+💰 Valor original: R$ {original_price:.2f}
+🎁 Desconto: {discount_percentage}%
+💵 *Valor final: R$ {final_price:.2f}*"""
+    else:
+        message_body += f"\n💰 Valor: R$ {final_price:.2f}"
+    
+    if address:
+        message_body += f"\n\n📌 Endereço: {address}"
+    
+    if latitude and longitude:
+        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+        message_body += f"\n🗺️ Ver no mapa: {maps_link}"
+    
+    message_body += "\n\n📲 Você receberá um lembrete 30 minutos antes do horário.\n\nAté logo! 💈"
+    
+    return await send_whatsapp_message(phone, message_body)
+
 async def send_email_notification(to_email: str, subject: str, html_content: str):
     if not resend.api_key:
         logger.warning("RESEND_API_KEY not configured, skipping email")
