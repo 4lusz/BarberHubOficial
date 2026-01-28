@@ -559,7 +559,7 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-center gap-3 mb-4">
                       {barbershop?.logo_url && (
-                        <img src={barbershop.logo_url} alt="Logo" className="w-10 h-10 rounded" />
+                        <img src={getImageUrl(barbershop.logo_url)} alt="Logo" className="w-10 h-10 rounded" />
                       )}
                       <h3 
                         className="font-heading text-xl" 
