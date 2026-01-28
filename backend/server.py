@@ -2545,8 +2545,12 @@ async def add_vip_client(data: VipClientCreate, current_user: dict = Depends(get
     """Add a VIP client (Premium only)"""
     barbershop = await check_premium_access(current_user)
     
+    # Normalize phone number
+    phone_result = normalize_brazilian_phone(data.client_phone)
+    normalized_phone = phone_result["normalized"] if phone_result["success"] else data.client_phone
+    
     # Check if client already exists by phone
-    clean_phone = ''.join(filter(str.isdigit, data.client_phone))
+    clean_phone = ''.join(filter(str.isdigit, normalized_phone))
     existing = await db.vip_clients.find_one({
         "barbershop_id": current_user["barbershop_id"],
         "client_phone": {"$regex": clean_phone}
@@ -2560,7 +2564,7 @@ async def add_vip_client(data: VipClientCreate, current_user: dict = Depends(get
         "vip_id": client_id,
         "barbershop_id": current_user["barbershop_id"],
         "client_name": data.client_name,
-        "client_phone": data.client_phone,
+        "client_phone": normalized_phone,
         "client_email": data.client_email,
         "discount_percentage": data.discount_percentage,
         "notes": data.notes,
@@ -2582,7 +2586,7 @@ Você agora faz parte dos clientes especiais da *{barbershop['name']}*!
 
 Agende seu próximo horário e aproveite! 💈"""
     
-    await send_whatsapp_message(data.client_phone, message)
+    await send_whatsapp_message(normalized_phone, message)
     
     return client_doc
 
