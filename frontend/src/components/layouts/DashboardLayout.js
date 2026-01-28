@@ -19,6 +19,7 @@ import {
   Ban,
   BarChart3,
   Crown,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/bloqueios', label: 'Bloqueios', icon: Ban },
   { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/clientes-vip', label: 'Clientes VIP', icon: Crown },
+  { href: '/assinatura', label: 'Minha Assinatura', icon: CreditCard },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
