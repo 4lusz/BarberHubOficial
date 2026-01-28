@@ -74,7 +74,7 @@ export default function LandingPage() {
               </Link>
               <Link to="/cadastro">
                 <Button className="btn-press" data-testid="header-register-button">
-                  Começar Grátis
+                  Criar Conta
                 </Button>
               </Link>
             </div>
@@ -184,7 +184,7 @@ export default function LandingPage() {
           <div className="mt-10">
             <Link to="/cadastro">
               <Button size="lg" className="btn-press text-lg px-10" data-testid="cta-register-button">
-                Criar Conta Grátis
+                Criar Conta
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
@@ -238,7 +238,7 @@ export default function LandingPage() {
               </ul>
               <Link to="/cadastro">
                 <Button className="w-full btn-press" variant="outline">
-                  Começar com 7 dias grátis
+                  Começar Agora
                 </Button>
               </Link>
             </div>
@@ -283,7 +283,7 @@ export default function LandingPage() {
               </ul>
               <Link to="/cadastro">
                 <Button className="w-full btn-press animate-pulse-glow">
-                  Começar com 7 dias grátis
+                  Começar Agora
                 </Button>
               </Link>
             </div>
