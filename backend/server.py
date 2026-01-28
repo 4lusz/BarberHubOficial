@@ -395,18 +395,142 @@ def calculate_end_time(start_time: str, duration_minutes: int) -> str:
     end_minutes = total_minutes % 60
     return f"{end_hours:02d}:{end_minutes:02d}"
 
-def format_phone_for_whatsapp(phone: str) -> str:
-    """Format phone number for WhatsApp (E.164 format)"""
+# ==================== PHONE NUMBER NORMALIZATION ====================
+
+# Valid Brazilian DDD codes
+VALID_DDDS = {
+    '11', '12', '13', '14', '15', '16', '17', '18', '19',  # SP
+    '21', '22', '24',  # RJ
+    '27', '28',  # ES
+    '31', '32', '33', '34', '35', '37', '38',  # MG
+    '41', '42', '43', '44', '45', '46',  # PR
+    '47', '48', '49',  # SC
+    '51', '53', '54', '55',  # RS
+    '61',  # DF
+    '62', '64',  # GO
+    '63',  # TO
+    '65', '66',  # MT
+    '67',  # MS
+    '68',  # AC
+    '69',  # RO
+    '71', '73', '74', '75', '77',  # BA
+    '79',  # SE
+    '81', '82', '83', '84', '85', '86', '87', '88', '89',  # NE
+    '91', '92', '93', '94', '95', '96', '97', '98', '99',  # Norte
+}
+
+def normalize_brazilian_phone(phone: str) -> dict:
+    """
+    Normalize Brazilian phone number to international format +55DDNNNNNNNNN
+    
+    Returns:
+        {
+            "success": bool,
+            "normalized": str (E.164 format like +5564999766685),
+            "formatted": str (display format like (64) 99976-6685),
+            "error": str (if success is False)
+        }
+    """
+    if not phone:
+        return {"success": False, "normalized": None, "formatted": None, "error": "Número de telefone é obrigatório"}
+    
     # Remove all non-numeric characters
     digits = ''.join(filter(str.isdigit, phone))
     
-    # Add Brazil country code if not present
-    if len(digits) == 11:  # Brazilian mobile with DDD
-        digits = '55' + digits
-    elif len(digits) == 10:  # Brazilian mobile without 9
-        digits = '55' + digits
+    # Remove country code if present
+    if digits.startswith('55') and len(digits) >= 12:
+        digits = digits[2:]
     
-    return '+' + digits
+    # Validate minimum length (DDD + 8 digits minimum)
+    if len(digits) < 10:
+        return {
+            "success": False, 
+            "normalized": None, 
+            "formatted": None, 
+            "error": "Número incompleto. Informe DDD + número (ex: 64999766685)"
+        }
+    
+    # Extract DDD (first 2 digits)
+    ddd = digits[:2]
+    number = digits[2:]
+    
+    # Validate DDD
+    if ddd not in VALID_DDDS:
+        return {
+            "success": False,
+            "normalized": None,
+            "formatted": None,
+            "error": f"DDD {ddd} inválido. Verifique o número informado."
+        }
+    
+    # Brazilian mobile numbers must have 9 digits (starting with 9)
+    # Landlines have 8 digits
+    if len(number) == 8:
+        # Could be landline or mobile missing the 9
+        # If starts with 9, 8, 7, 6 - it's likely a mobile missing the leading 9
+        if number[0] in '6789':
+            number = '9' + number
+    elif len(number) == 9:
+        # Mobile number - validate it starts with 9
+        if number[0] != '9':
+            return {
+                "success": False,
+                "normalized": None,
+                "formatted": None,
+                "error": "Celular deve começar com 9 após o DDD"
+            }
+    elif len(number) > 9:
+        return {
+            "success": False,
+            "normalized": None,
+            "formatted": None,
+            "error": "Número muito longo. Verifique se digitou corretamente."
+        }
+    
+    # Build normalized number (E.164 format)
+    normalized = f"+55{ddd}{number}"
+    
+    # Build formatted display
+    if len(number) == 9:
+        # Mobile: (DD) 9NNNN-NNNN
+        formatted = f"({ddd}) {number[:5]}-{number[5:]}"
+    else:
+        # Landline: (DD) NNNN-NNNN
+        formatted = f"({ddd}) {number[:4]}-{number[4:]}"
+    
+    return {
+        "success": True,
+        "normalized": normalized,
+        "formatted": formatted,
+        "error": None
+    }
+
+def format_phone_for_whatsapp(phone: str) -> str:
+    """Format phone number for WhatsApp API (E.164 format without +)"""
+    result = normalize_brazilian_phone(phone)
+    if result["success"]:
+        # Return without the + for WhatsApp API
+        return result["normalized"][1:]  # Remove leading +
+    
+    # Fallback: just clean the digits and add 55 if needed
+    digits = ''.join(filter(str.isdigit, phone))
+    if not digits.startswith('55') and len(digits) >= 10:
+        digits = '55' + digits
+    return digits
+
+def format_phone_for_display(phone: str) -> str:
+    """Format phone number for display"""
+    result = normalize_brazilian_phone(phone)
+    if result["success"]:
+        return result["formatted"]
+    return phone  # Return original if can't format
+
+# API endpoint to validate/normalize phone
+@api_router.post("/utils/normalize-phone")
+async def normalize_phone_endpoint(phone: str):
+    """Normalize and validate a Brazilian phone number"""
+    result = normalize_brazilian_phone(phone)
+    return result
 
 async def send_whatsapp_message(phone: str, message: str):
     """Send WhatsApp message via Respond.io API"""
