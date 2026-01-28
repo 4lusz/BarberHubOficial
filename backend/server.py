@@ -40,7 +40,6 @@ MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 
 # Respond.io Config (WhatsApp API)
 RESPONDIO_API_TOKEN = os.environ.get('RESPONDIO_API_TOKEN', '')
-RESPONDIO_SPACE_ID = os.environ.get('RESPONDIO_SPACE_ID', '')
 RESPONDIO_CHANNEL_ID = os.environ.get('RESPONDIO_CHANNEL_ID', '')
 
 # Initialize scheduler for background jobs
@@ -381,7 +380,7 @@ def format_phone_for_whatsapp(phone: str) -> str:
 
 async def send_whatsapp_message(phone: str, message: str):
     """Send WhatsApp message via Respond.io API"""
-    if not RESPONDIO_API_TOKEN or not RESPONDIO_SPACE_ID or not RESPONDIO_CHANNEL_ID:
+    if not RESPONDIO_API_TOKEN or not RESPONDIO_CHANNEL_ID:
         logger.warning("Respond.io not configured, skipping WhatsApp")
         return None
     
@@ -389,7 +388,7 @@ async def send_whatsapp_message(phone: str, message: str):
         formatted_phone = format_phone_for_whatsapp(phone)
         
         async with httpx.AsyncClient() as http_client:
-            # First, find or create contact
+            # Send message via Respond.io API
             contact_response = await http_client.post(
                 f"https://api.respond.io/v2/contact/phone:{formatted_phone}/message",
                 json={
