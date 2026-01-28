@@ -2855,6 +2855,9 @@ async def create_demo_premium_account(secret_key: str):
 
 app.include_router(api_router)
 
+# Mount uploads directory for serving static files
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
