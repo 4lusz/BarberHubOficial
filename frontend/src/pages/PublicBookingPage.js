@@ -557,7 +557,7 @@ export default function PublicBookingPage() {
                   onClick={() => setShowGallery(true)}
                   className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-colors"
                 >
-                  <img src={url} alt={`Trabalho ${index + 1}`} className="w-full h-full object-cover" />
+                  <img src={getImageUrl(url)} alt={`Trabalho ${index + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
               {data.barbershop.gallery_images.length > 5 && (
