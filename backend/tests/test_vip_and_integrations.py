@@ -204,8 +204,8 @@ class TestVIPDiscountInAppointment:
         assert service_response.status_code == 200
         service = service_response.json()
         
-        # Create VIP client
-        vip_phone = f"119{unique_id[:8]}"
+        # Create VIP client - use a consistent phone format
+        vip_phone = "11987654321"
         vip_response = requests.post(
             f"{BASE_URL}/api/vip-clients",
             json={
