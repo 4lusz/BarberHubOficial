@@ -783,13 +783,13 @@ export default function PublicBookingPage() {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="clientPhone" className="text-white">WhatsApp *</Label>
-                <Input
+                <Label htmlFor="clientPhone" className="text-white">WhatsApp * (com DDD)</Label>
+                <PhoneInput
                   id="clientPhone"
-                  type="tel"
-                  placeholder="(11) 99999-9999"
+                  placeholder="(64) 99976-6685"
                   value={booking.clientPhone}
                   onChange={handlePhoneChange}
+                  onNormalized={handlePhoneNormalized}
                   required
                   className="bg-gray-800 border-gray-700 text-white"
                   data-testid="client-phone-input"
