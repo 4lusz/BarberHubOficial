@@ -21,6 +21,7 @@ import PublicBookingPage from './pages/PublicBookingPage';
 import ClientAreaPage from './pages/ClientAreaPage';
 import ReportsPage from './pages/ReportsPage';
 import VipClientsPage from './pages/VipClientsPage';
+import SubscriptionPage from './pages/SubscriptionPage';
 
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
