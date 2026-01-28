@@ -1363,6 +1363,8 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
         update_data["logo_url"] = data.logo_url
     if data.banner_url is not None:
         update_data["banner_url"] = data.banner_url
+    if data.banner_position is not None:
+        update_data["banner_position"] = data.banner_position
     if data.about_text is not None:
         update_data["about_text"] = data.about_text
     if data.instagram_url is not None:
