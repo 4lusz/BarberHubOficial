@@ -271,7 +271,7 @@ export default function LandingPage() {
                   'Estatísticas de horários vendidos',
                   'Histórico financeiro',
                   'Gestão avançada de clientes',
-                  'Criação de planos/mensalidades',
+                  'Criação de clientes VIP com desconto',
                   'Controle de clientes recorrentes',
                   'Prioridade em novidades'
                 ].map((feature, idx) => (
