@@ -22,6 +22,7 @@ import ClientAreaPage from './pages/ClientAreaPage';
 import ReportsPage from './pages/ReportsPage';
 import VipClientsPage from './pages/VipClientsPage';
 import SubscriptionPage from './pages/SubscriptionPage';
+import SuperAdminPage from './pages/SuperAdminPage';
 
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
@@ -92,6 +93,7 @@ function AppRouter() {
       <Route path="/cadastro" element={<RegisterPage />} />
       <Route path="/b/:slug" element={<PublicBookingPage />} />
       <Route path="/minha-area" element={<ClientAreaPage />} />
+      <Route path="/super-admin" element={<SuperAdminPage />} />
       
       {/* Payment Flow Routes */}
       <Route
