@@ -92,7 +92,7 @@ SUBSCRIPTION_PLANS = {
             "Estatísticas de horários mais vendidos",
             "Histórico financeiro da barbearia",
             "Gestão avançada de clientes",
-            "Criação de planos/mensalidades para clientes",
+            "Criação de clientes VIP com desconto",
             "Controle de clientes recorrentes",
             "Prioridade em novas funcionalidades"
         ]
