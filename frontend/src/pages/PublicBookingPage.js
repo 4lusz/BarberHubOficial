@@ -129,12 +129,52 @@ export default function PublicBookingPage() {
     setStep('info');
   };
 
+  // Check VIP status when phone changes
+  const checkVipStatus = async (phone) => {
+    if (!phone || phone.length < 10 || !data?.barbershop) return;
+    
+    setCheckingVip(true);
+    try {
+      const response = await api.get(`/vip-clients/check/${encodeURIComponent(phone)}?barbershop_id=${data.barbershop.barbershop_id}`);
+      setVipInfo(response.data);
+      if (response.data.is_vip && response.data.client_name) {
+        setBooking(prev => ({ ...prev, clientName: response.data.client_name }));
+      }
+    } catch (error) {
+      setVipInfo({ is_vip: false, discount_percentage: 0 });
+    } finally {
+      setCheckingVip(false);
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const phone = e.target.value;
+    setBooking({ ...booking, clientPhone: phone });
+    
+    // Check VIP after user stops typing (debounce)
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length >= 10) {
+      const timeoutId = setTimeout(() => checkVipStatus(cleanPhone), 500);
+      return () => clearTimeout(timeoutId);
+    }
+  };
+
+  // Calculate final price with VIP discount
+  const calculateFinalPrice = () => {
+    if (!booking.service) return 0;
+    const originalPrice = booking.service.price;
+    if (vipInfo.is_vip && vipInfo.discount_percentage > 0) {
+      return originalPrice * (1 - vipInfo.discount_percentage / 100);
+    }
+    return originalPrice;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      await api.post('/appointments', {
+      const response = await api.post('/appointments', {
         barbershop_id: data.barbershop.barbershop_id,
         service_id: booking.service.service_id,
         professional_id: booking.professional?.professional_id || null,
@@ -144,6 +184,7 @@ export default function PublicBookingPage() {
         client_phone: booking.clientPhone,
         client_email: booking.clientEmail || null,
       });
+      setSuccessData(response.data);
       setSuccess(true);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao realizar agendamento');
