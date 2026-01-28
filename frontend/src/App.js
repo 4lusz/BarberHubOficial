@@ -23,6 +23,9 @@ import ReportsPage from './pages/ReportsPage';
 import VipClientsPage from './pages/VipClientsPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import SuperAdminPage from './pages/SuperAdminPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import FAQPage from './pages/FAQPage';
 
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
