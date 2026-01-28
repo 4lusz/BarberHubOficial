@@ -10,7 +10,11 @@ import {
   CheckCircle,
   ArrowRight,
   Star,
-  Zap
+  Zap,
+  Mail,
+  HelpCircle,
+  FileText,
+  Shield
 } from 'lucide-react';
 
 const features = [
