@@ -1355,6 +1355,20 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
         update_data["primary_color"] = data.primary_color
     if data.background_color is not None:
         update_data["background_color"] = data.background_color
+    if data.font_style is not None:
+        update_data["font_style"] = data.font_style
+    if data.logo_url is not None:
+        update_data["logo_url"] = data.logo_url
+    if data.banner_url is not None:
+        update_data["banner_url"] = data.banner_url
+    if data.about_text is not None:
+        update_data["about_text"] = data.about_text
+    if data.instagram_url is not None:
+        update_data["instagram_url"] = data.instagram_url
+    if data.facebook_url is not None:
+        update_data["facebook_url"] = data.facebook_url
+    if data.whatsapp_number is not None:
+        update_data["whatsapp_number"] = data.whatsapp_number
     
     if update_data:
         await db.barbershops.update_one(
@@ -1367,6 +1381,86 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
         {"_id": 0}
     )
     return barbershop
+
+@api_router.post("/barbershops/upload/{upload_type}")
+async def upload_barbershop_image(
+    upload_type: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload logo, banner or gallery image for barbershop"""
+    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    if upload_type not in ["logo", "banner", "gallery"]:
+        raise HTTPException(status_code=400, detail="Tipo de upload inválido")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Tipo de arquivo não permitido. Use JPG, PNG, WEBP ou GIF")
+    
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{current_user['barbershop_id']}_{uuid.uuid4().hex[:8]}.{ext}"
+    
+    # Determine folder
+    folder_map = {"logo": "logos", "banner": "banners", "gallery": "gallery"}
+    folder = UPLOADS_DIR / folder_map[upload_type]
+    filepath = folder / filename
+    
+    # Save file
+    try:
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        logger.error(f"Upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao salvar arquivo")
+    
+    # Generate URL
+    base_url = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+    if not base_url:
+        base_url = os.environ.get('FRONTEND_URL', 'https://barberhubpro.com.br').replace('https://', 'https://').rstrip('/')
+    image_url = f"{base_url}/api/uploads/{folder_map[upload_type]}/{filename}"
+    
+    # Update barbershop if logo or banner
+    if upload_type in ["logo", "banner"]:
+        field = f"{upload_type}_url"
+        await db.barbershops.update_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"$set": {field: image_url}}
+        )
+    elif upload_type == "gallery":
+        # Add to gallery array
+        await db.barbershops.update_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"$push": {"gallery_images": image_url}}
+        )
+    
+    return {"success": True, "url": image_url, "type": upload_type}
+
+@api_router.delete("/barbershops/gallery")
+async def delete_gallery_image(image_url: str, current_user: dict = Depends(get_current_user)):
+    """Remove image from gallery"""
+    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    # Remove from database
+    await db.barbershops.update_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"$pull": {"gallery_images": image_url}}
+    )
+    
+    # Try to delete file
+    try:
+        filename = image_url.split("/")[-1]
+        filepath = UPLOADS_DIR / "gallery" / filename
+        if filepath.exists():
+            filepath.unlink()
+    except Exception as e:
+        logger.warning(f"Could not delete file: {str(e)}")
+    
+    return {"success": True}
 
 @api_router.get("/barbershops/public/{slug}")
 async def get_public_barbershop(slug: str):
