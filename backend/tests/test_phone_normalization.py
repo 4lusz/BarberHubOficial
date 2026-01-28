@@ -139,7 +139,12 @@ class TestPhoneNormalizationInAppointment:
         """Get demo-premium barbershop data"""
         response = requests.get(f"{BASE_URL}/api/barbershops/public/demo-premium")
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            # Response has nested structure: {barbershop: {...}, services: [...], ...}
+            return {
+                "barbershop_id": data["barbershop"]["barbershop_id"],
+                "services": data.get("services", [])
+            }
         pytest.skip("Demo barbershop not available")
     
     def test_appointment_normalizes_phone_on_creation(self, barbershop_data):
@@ -233,7 +238,8 @@ class TestVIPCheckWithDifferentPhoneFormats:
         """Get demo-premium barbershop ID"""
         response = requests.get(f"{BASE_URL}/api/barbershops/public/demo-premium")
         if response.status_code == 200:
-            return response.json()["barbershop_id"]
+            data = response.json()
+            return data["barbershop"]["barbershop_id"]
         pytest.skip("Demo barbershop not available")
     
     def test_vip_check_with_normalized_phone(self, barbershop_id):
