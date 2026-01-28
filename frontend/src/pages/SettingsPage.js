@@ -398,7 +398,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-4">
                   {barbershop?.logo_url ? (
                     <img 
-                      src={barbershop.logo_url} 
+                      src={getImageUrl(barbershop.logo_url)} 
                       alt="Logo" 
                       className="w-20 h-20 object-cover rounded-lg border border-border"
                     />
@@ -437,7 +437,7 @@ export default function SettingsPage() {
                 {barbershop?.banner_url ? (
                   <div className="relative">
                     <img 
-                      src={barbershop.banner_url} 
+                      src={getImageUrl(barbershop.banner_url)} 
                       alt="Banner" 
                       className="w-full h-40 object-cover rounded-lg border border-border"
                     />
