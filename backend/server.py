@@ -246,6 +246,10 @@ class Appointment(BaseModel):
     notes: Optional[str] = None
     status: str = "pending"
     reminder_sent: bool = False
+    original_price: Optional[float] = None
+    final_price: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    is_vip: bool = False
     created_at: datetime
 
 class AppointmentUpdate(BaseModel):
