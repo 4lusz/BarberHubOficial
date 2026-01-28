@@ -1004,61 +1004,203 @@ async def create_simple_checkout(data: SubscriptionPayment, plan: dict, current_
 
 @api_router.post("/webhooks/mercadopago")
 async def mercadopago_webhook(request: Request):
-    """Handle Mercado Pago payment notifications"""
+    """Handle Mercado Pago payment and subscription notifications"""
     try:
         data = await request.json()
         logger.info(f"Mercado Pago webhook: {data}")
         
-        if data.get("type") == "payment":
-            payment_id = data.get("data", {}).get("id")
-            
-            async with httpx.AsyncClient() as client_http:
-                resp = await client_http.get(
-                    f"https://api.mercadopago.com/v1/payments/{payment_id}",
-                    headers={"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
-                )
-                
-                if resp.status_code == 200:
-                    payment_data = resp.json()
-                    external_ref = payment_data.get("external_reference", "")
-                    status = payment_data.get("status")
-                    
-                    if status == "approved" and external_ref:
-                        parts = external_ref.split("_")
-                        if len(parts) >= 2:
-                            user_id = parts[0]
-                            plan_id = parts[1]
-                            
-                            # Get user
-                            user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-                            if user and user.get("barbershop_id"):
-                                # Activate/renew subscription
-                                expires_at = datetime.now(timezone.utc) + timedelta(days=30)
-                                await db.barbershops.update_one(
-                                    {"barbershop_id": user["barbershop_id"]},
-                                    {"$set": {
-                                        "plan": plan_id,
-                                        "plan_status": "active",
-                                        "plan_expires_at": expires_at.isoformat()
-                                    }}
-                                )
-                                
-                                # Log payment
-                                await db.payments.insert_one({
-                                    "payment_id": generate_id("pay"),
-                                    "barbershop_id": user["barbershop_id"],
-                                    "user_id": user_id,
-                                    "plan_id": plan_id,
-                                    "amount": payment_data.get("transaction_amount"),
-                                    "mp_payment_id": payment_id,
-                                    "status": "approved",
-                                    "created_at": datetime.now(timezone.utc).isoformat()
-                                })
+        notification_type = data.get("type")
+        resource_id = data.get("data", {}).get("id")
+        
+        if notification_type == "payment":
+            # Handle payment notification
+            await handle_payment_notification(resource_id)
+        
+        elif notification_type == "subscription_preapproval":
+            # Handle subscription (preapproval) notification
+            await handle_subscription_notification(resource_id)
+        
+        elif notification_type == "subscription_authorized_payment":
+            # Handle recurring payment notification
+            await handle_recurring_payment_notification(resource_id)
         
         return Response(status_code=200)
     except Exception as e:
         logger.error(f"Webhook error: {str(e)}")
         return Response(status_code=200)
+
+async def handle_payment_notification(payment_id: str):
+    """Process payment notification from Mercado Pago"""
+    try:
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.get(
+                f"https://api.mercadopago.com/v1/payments/{payment_id}",
+                headers={"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
+            )
+            
+            if resp.status_code == 200:
+                payment_data = resp.json()
+                external_ref = payment_data.get("external_reference", "")
+                status = payment_data.get("status")
+                
+                if status == "approved" and external_ref:
+                    parts = external_ref.split("_")
+                    if len(parts) >= 2:
+                        user_id = parts[0]
+                        plan_id = parts[1]
+                        await activate_subscription(user_id, plan_id, payment_id, payment_data.get("transaction_amount"))
+                        
+                elif status in ["rejected", "cancelled"]:
+                    # Payment failed
+                    logger.warning(f"Payment {payment_id} status: {status}")
+    except Exception as e:
+        logger.error(f"Payment notification error: {str(e)}")
+
+async def handle_subscription_notification(preapproval_id: str):
+    """Process subscription (preapproval) status changes"""
+    try:
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.get(
+                f"https://api.mercadopago.com/preapproval/{preapproval_id}",
+                headers={"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
+            )
+            
+            if resp.status_code == 200:
+                preapproval_data = resp.json()
+                external_ref = preapproval_data.get("external_reference", "")
+                status = preapproval_data.get("status")
+                
+                logger.info(f"Subscription {preapproval_id} status: {status}")
+                
+                if status == "authorized" and external_ref:
+                    # Subscription is authorized and active
+                    parts = external_ref.split("_")
+                    if len(parts) >= 2:
+                        user_id = parts[0]
+                        plan_id = parts[1]
+                        
+                        # Update subscription record
+                        await db.subscriptions.update_one(
+                            {"mp_preapproval_id": preapproval_id},
+                            {"$set": {
+                                "status": "active",
+                                "authorized_at": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                        
+                        # Activate barbershop subscription
+                        await activate_subscription(user_id, plan_id)
+                
+                elif status in ["paused", "cancelled"]:
+                    # Subscription was paused or cancelled
+                    await db.subscriptions.update_one(
+                        {"mp_preapproval_id": preapproval_id},
+                        {"$set": {"status": status}}
+                    )
+                    
+                    # If cancelled, could deactivate but we'll let expiration handle it
+                    if status == "cancelled":
+                        logger.info(f"Subscription {preapproval_id} was cancelled")
+                        
+    except Exception as e:
+        logger.error(f"Subscription notification error: {str(e)}")
+
+async def handle_recurring_payment_notification(authorized_payment_id: str):
+    """Process recurring payment from subscription"""
+    try:
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.get(
+                f"https://api.mercadopago.com/authorized_payments/{authorized_payment_id}",
+                headers={"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
+            )
+            
+            if resp.status_code == 200:
+                payment_data = resp.json()
+                status = payment_data.get("status")
+                preapproval_id = payment_data.get("preapproval_id")
+                
+                logger.info(f"Recurring payment {authorized_payment_id} status: {status}")
+                
+                if status == "approved":
+                    # Find subscription and renew
+                    subscription = await db.subscriptions.find_one(
+                        {"mp_preapproval_id": preapproval_id},
+                        {"_id": 0}
+                    )
+                    
+                    if subscription:
+                        await activate_subscription(
+                            subscription["user_id"],
+                            subscription["plan_id"],
+                            authorized_payment_id,
+                            payment_data.get("transaction_amount")
+                        )
+                        
+                        # Send WhatsApp notification about successful renewal
+                        user = await db.users.find_one({"user_id": subscription["user_id"]}, {"_id": 0})
+                        if user and user.get("phone") and RESPONDIO_API_TOKEN:
+                            plan = SUBSCRIPTION_PLANS.get(subscription["plan_id"])
+                            message = f"""✅ *Pagamento Confirmado*
+
+Sua assinatura do BarberHub ({plan['name']}) foi renovada automaticamente.
+
+💰 Valor: R$ {plan['price']:.2f}
+📅 Próxima cobrança em 30 dias
+
+Obrigado por confiar no BarberHub! 💈"""
+                            await send_whatsapp_message(user["phone"], message)
+                
+                elif status == "rejected":
+                    # Recurring payment failed - send alert
+                    subscription = await db.subscriptions.find_one(
+                        {"mp_preapproval_id": preapproval_id},
+                        {"_id": 0}
+                    )
+                    
+                    if subscription:
+                        user = await db.users.find_one({"user_id": subscription["user_id"]}, {"_id": 0})
+                        if user and user.get("phone") and RESPONDIO_API_TOKEN:
+                            plan = SUBSCRIPTION_PLANS.get(subscription["plan_id"])
+                            message = f"""⚠️ *Problema no Pagamento*
+
+Não foi possível processar a renovação automática da sua assinatura do BarberHub ({plan['name']}).
+
+Por favor, acesse sua conta e atualize seus dados de pagamento para evitar a suspensão do serviço.
+
+Precisa de ajuda? Entre em contato conosco."""
+                            await send_whatsapp_message(user["phone"], message)
+                            
+    except Exception as e:
+        logger.error(f"Recurring payment notification error: {str(e)}")
+
+async def activate_subscription(user_id: str, plan_id: str, payment_id: str = None, amount: float = None):
+    """Activate or renew a subscription"""
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if user and user.get("barbershop_id"):
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+        await db.barbershops.update_one(
+            {"barbershop_id": user["barbershop_id"]},
+            {"$set": {
+                "plan": plan_id,
+                "plan_status": "active",
+                "plan_expires_at": expires_at.isoformat()
+            }}
+        )
+        
+        # Log payment if provided
+        if payment_id:
+            await db.payments.insert_one({
+                "payment_id": generate_id("pay"),
+                "barbershop_id": user["barbershop_id"],
+                "user_id": user_id,
+                "plan_id": plan_id,
+                "amount": amount or SUBSCRIPTION_PLANS.get(plan_id, {}).get("price"),
+                "mp_payment_id": payment_id,
+                "status": "approved",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        
+        logger.info(f"Subscription activated for user {user_id}, plan {plan_id}")
 
 
 # ==================== BARBERSHOP ROUTES ====================
