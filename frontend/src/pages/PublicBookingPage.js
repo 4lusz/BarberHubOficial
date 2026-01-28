@@ -374,7 +374,7 @@ export default function PublicBookingPage() {
       {/* Gallery Modal */}
       {showGallery && (
         <GalleryModal 
-          images={data.barbershop.gallery_images} 
+          images={data.barbershop.gallery_images?.map(url => getImageUrl(url))} 
           onClose={() => setShowGallery(false)} 
         />
       )}
@@ -384,7 +384,7 @@ export default function PublicBookingPage() {
         {data.barbershop.banner_url ? (
           <div 
             className="h-48 bg-cover bg-center"
-            style={{ backgroundImage: `url(${data.barbershop.banner_url})` }}
+            style={{ backgroundImage: `url(${getImageUrl(data.barbershop.banner_url)})` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70" />
           </div>
@@ -397,7 +397,7 @@ export default function PublicBookingPage() {
           <div className="max-w-2xl mx-auto flex items-end gap-4">
             {data.barbershop.logo_url ? (
               <img 
-                src={data.barbershop.logo_url} 
+                src={getImageUrl(data.barbershop.logo_url)} 
                 alt={data.barbershop.name}
                 className="w-20 h-20 rounded-xl border-4 object-cover"
                 style={{ borderColor: bgColor }}
