@@ -2185,6 +2185,10 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     # Get barbershop for VIP check and notifications
     barbershop = await db.barbershops.find_one({"barbershop_id": data.barbershop_id}, {"_id": 0})
     
+    # Normalize client phone number
+    phone_result = normalize_brazilian_phone(data.client_phone)
+    normalized_phone = phone_result["normalized"] if phone_result["success"] else data.client_phone
+    
     # Check if client is VIP and calculate discount
     original_price = service["price"]
     final_price = original_price
@@ -2193,7 +2197,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     
     # Only check VIP if barbershop has premium plan
     if barbershop and barbershop.get("plan") == "premium":
-        clean_phone = ''.join(filter(str.isdigit, data.client_phone))
+        clean_phone = ''.join(filter(str.isdigit, normalized_phone))
         vip_client = await db.vip_clients.find_one({
             "barbershop_id": data.barbershop_id,
             "client_phone": {"$regex": clean_phone},
@@ -2204,7 +2208,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
             is_vip = True
             discount_percentage = vip_client.get("discount_percentage", 0)
             final_price = original_price * (1 - discount_percentage / 100)
-            logger.info(f"VIP discount applied: {discount_percentage}% for {data.client_phone}")
+            logger.info(f"VIP discount applied: {discount_percentage}% for {normalized_phone}")
     
     appointment_id = generate_id("apt")
     apt_doc = {
@@ -2217,7 +2221,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
         "time": data.time,
         "end_time": end_time,
         "client_name": data.client_name,
-        "client_phone": data.client_phone,
+        "client_phone": normalized_phone,
         "client_email": data.client_email,
         "notes": data.notes,
         "status": "pending",
@@ -2235,7 +2239,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     if barbershop:
         try:
             await send_whatsapp_booking_confirmation(
-                phone=data.client_phone,
+                phone=normalized_phone,
                 client_name=data.client_name,
                 barbershop_name=barbershop["name"],
                 service_name=service["name"],
