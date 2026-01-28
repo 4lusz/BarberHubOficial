@@ -19,6 +19,14 @@ import {
   Check,
   Calendar as CalendarIcon,
   ArrowLeft,
+  Instagram,
+  Facebook,
+  MessageCircle,
+  ExternalLink,
+  Image,
+  Info,
+  X,
+  Star,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, addDays, isBefore, startOfToday } from 'date-fns';
@@ -26,11 +34,61 @@ import { ptBR } from 'date-fns/locale';
 
 const steps = ['service', 'professional', 'datetime', 'info', 'confirm'];
 
+const FONT_STYLES = {
+  modern: 'Inter, sans-serif',
+  classic: 'Georgia, serif',
+  bold: 'Arial Black, sans-serif',
+};
+
+// Gallery Modal Component
+function GalleryModal({ images, onClose }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!images || images.length === 0) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+      <button 
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full"
+      >
+        <X className="w-6 h-6" />
+      </button>
+      
+      <button 
+        onClick={() => setCurrentIndex(i => i > 0 ? i - 1 : images.length - 1)}
+        className="absolute left-4 p-2 text-white hover:bg-white/10 rounded-full"
+      >
+        <ChevronLeft className="w-8 h-8" />
+      </button>
+      
+      <img 
+        src={images[currentIndex]} 
+        alt={`Trabalho ${currentIndex + 1}`}
+        className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg"
+      />
+      
+      <button 
+        onClick={() => setCurrentIndex(i => i < images.length - 1 ? i + 1 : 0)}
+        className="absolute right-4 p-2 text-white hover:bg-white/10 rounded-full"
+      >
+        <ChevronRight className="w-8 h-8" />
+      </button>
+      
+      <div className="absolute bottom-4 text-white text-sm">
+        {currentIndex + 1} / {images.length}
+      </div>
+    </div>
+  );
+}
+
 export default function PublicBookingPage() {
   const { slug } = useParams();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [step, setStep] = useState('service');
+  const [showGallery, setShowGallery] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [booking, setBooking] = useState({
     service: null,
     professional: null,
@@ -48,31 +106,14 @@ export default function PublicBookingPage() {
   const [vipInfo, setVipInfo] = useState({ is_vip: false, discount_percentage: 0 });
   const [checkingVip, setCheckingVip] = useState(false);
 
-  // Get custom colors from barbershop
+  // Get custom styles from barbershop
   const primaryColor = data?.barbershop?.primary_color || '#F59E0B';
   const bgColor = data?.barbershop?.background_color || '#09090B';
+  const fontStyle = FONT_STYLES[data?.barbershop?.font_style] || FONT_STYLES.modern;
 
   useEffect(() => {
     fetchBarbershop();
   }, [slug]);
-
-  useEffect(() => {
-    if (booking.service && booking.date && data) {
-      fetchAvailability();
-    }
-  }, [booking.service, booking.date, booking.professional]);
-
-  // Apply custom colors
-  useEffect(() => {
-    if (data?.barbershop) {
-      document.documentElement.style.setProperty('--booking-primary', primaryColor);
-      document.documentElement.style.setProperty('--booking-bg', bgColor);
-    }
-    return () => {
-      document.documentElement.style.removeProperty('--booking-primary');
-      document.documentElement.style.removeProperty('--booking-bg');
-    };
-  }, [data, primaryColor, bgColor]);
 
   const fetchBarbershop = async () => {
     try {
@@ -85,20 +126,23 @@ export default function PublicBookingPage() {
     }
   };
 
+  useEffect(() => {
+    if (booking.date && booking.service) {
+      fetchAvailability();
+    }
+  }, [booking.date, booking.service, booking.professional]);
+
   const fetchAvailability = async () => {
-    if (!booking.service || !booking.date) return;
+    if (!booking.date || !data?.barbershop) return;
     
     setLoadingSlots(true);
     try {
       const dateStr = format(booking.date, 'yyyy-MM-dd');
-      let url = `/appointments/availability/${data.barbershop.barbershop_id}?date=${dateStr}&service_id=${booking.service.service_id}`;
-      if (booking.professional) {
-        url += `&professional_id=${booking.professional.professional_id}`;
-      }
-      const response = await api.get(url);
+      const response = await api.get(
+        `/appointments/availability/${data.barbershop.barbershop_id}?date=${dateStr}&service_id=${booking.service.service_id}${booking.professional ? `&professional_id=${booking.professional.professional_id}` : ''}`
+      );
       setAvailableSlots(response.data.available_slots || []);
     } catch (error) {
-      toast.error('Erro ao buscar horários');
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -107,7 +151,6 @@ export default function PublicBookingPage() {
 
   const handleServiceSelect = (service) => {
     setBooking({ ...booking, service, time: null });
-    // Skip professional step if no professionals
     if (data.professionals.length === 0) {
       setStep('datetime');
     } else {
@@ -151,7 +194,6 @@ export default function PublicBookingPage() {
     const phone = e.target.value;
     setBooking({ ...booking, clientPhone: phone });
     
-    // Check VIP after user stops typing (debounce)
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length >= 10) {
       const timeoutId = setTimeout(() => checkVipStatus(cleanPhone), 500);
@@ -159,7 +201,6 @@ export default function PublicBookingPage() {
     }
   };
 
-  // Calculate final price with VIP discount
   const calculateFinalPrice = () => {
     if (!booking.service) return 0;
     const originalPrice = booking.service.price;
@@ -196,7 +237,6 @@ export default function PublicBookingPage() {
   const goBack = () => {
     const currentIndex = steps.indexOf(step);
     if (currentIndex > 0) {
-      // Skip professional step if no professionals
       if (steps[currentIndex - 1] === 'professional' && data.professionals.length === 0) {
         setStep('service');
       } else {
@@ -205,25 +245,40 @@ export default function PublicBookingPage() {
     }
   };
 
+  // Format business hours for display
+  const formatBusinessHours = () => {
+    if (!data?.business_hours) return [];
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    return data.business_hours
+      .sort((a, b) => a.day_of_week - b.day_of_week)
+      .map(h => ({
+        day: days[h.day_of_week],
+        hours: h.is_closed ? 'Fechado' : `${h.start_time} - ${h.end_time}`
+      }));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Carregando...</div>
+        <div className="text-center">
+          <Scissors className="w-12 h-12 text-primary animate-pulse mx-auto" />
+          <p className="mt-4 text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-border text-center">
-          <CardContent className="py-12">
-            <Scissors className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium">Barbearia não encontrada</p>
-            <p className="text-muted-foreground mt-2">
-              O link pode estar incorreto ou a barbearia não existe mais.
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md mx-4 border-border">
+          <CardContent className="py-12 text-center">
+            <Scissors className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h2 className="font-heading text-xl uppercase mb-2">Barbearia não encontrada</h2>
+            <p className="text-muted-foreground mb-4">
+              O link pode estar incorreto ou a barbearia foi desativada.
             </p>
-            <Link to="/" className="mt-6 inline-block">
+            <Link to="/">
               <Button variant="outline">Voltar ao início</Button>
             </Link>
           </CardContent>
@@ -232,6 +287,13 @@ export default function PublicBookingPage() {
     );
   }
 
+  // Custom CSS styles based on barbershop settings
+  const customStyles = {
+    '--primary-color': primaryColor,
+    fontFamily: fontStyle,
+  };
+
+  // Success screen
   if (success) {
     const finalPrice = successData?.final_price || calculateFinalPrice();
     const originalPrice = successData?.original_price || booking.service?.price || 0;
@@ -239,15 +301,17 @@ export default function PublicBookingPage() {
     const isVip = successData?.is_vip || vipInfo.is_vip;
 
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <Card className="w-full max-w-md border-border text-center border-green-500/30 bg-green-500/5">
           <CardContent className="py-12">
             <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="font-heading text-2xl uppercase mb-2">Agendamento Confirmado!</h2>
+            <h2 className="text-2xl uppercase mb-2" style={{ fontFamily: fontStyle, color: primaryColor }}>
+              Agendamento Confirmado!
+            </h2>
             <p className="text-muted-foreground mb-6">
-              Seu horário foi reservado com sucesso. Você receberá uma confirmação por WhatsApp.
+              Você receberá uma confirmação por WhatsApp.
             </p>
             <div className="bg-secondary/50 rounded-lg p-4 text-left space-y-2 mb-6">
               <p><strong>Serviço:</strong> {booking.service.name}</p>
@@ -257,19 +321,17 @@ export default function PublicBookingPage() {
                 <p><strong>Profissional:</strong> {booking.professional.name}</p>
               )}
               {isVip && discountApplied > 0 ? (
-                <>
-                  <div className="pt-2 border-t border-gray-600">
-                    <p className="text-yellow-500 font-semibold flex items-center gap-1">
-                      <span>🌟</span> Cliente VIP!
-                    </p>
-                    <p className="text-gray-400 line-through text-sm">
-                      Valor original: {formatCurrency(originalPrice)}
-                    </p>
-                    <p className="text-green-400 font-semibold">
-                      Com desconto de {discountApplied}%: {formatCurrency(finalPrice)}
-                    </p>
-                  </div>
-                </>
+                <div className="pt-2 border-t border-gray-600">
+                  <p className="text-yellow-500 font-semibold flex items-center gap-1">
+                    <Star className="w-4 h-4" fill="currentColor" /> Cliente VIP!
+                  </p>
+                  <p className="text-gray-400 line-through text-sm">
+                    Valor original: {formatCurrency(originalPrice)}
+                  </p>
+                  <p className="text-green-400 font-semibold">
+                    Com desconto de {discountApplied}%: {formatCurrency(finalPrice)}
+                  </p>
+                </div>
               ) : (
                 <p><strong>Valor:</strong> {formatCurrency(originalPrice)}</p>
               )}
@@ -301,168 +363,342 @@ export default function PublicBookingPage() {
     );
   }
 
-  const { barbershop, services, professionals, business_hours } = data;
-
-  // Custom styles based on barbershop colors
-  const customStyles = {
-    '--custom-primary': primaryColor,
-    '--custom-bg': bgColor,
-  };
-
   return (
     <div 
-      className="min-h-screen" 
+      className="min-h-screen"
       style={{ 
         backgroundColor: bgColor,
         ...customStyles 
       }}
     >
-      {/* Header */}
-      <header 
-        className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-md"
-        style={{ backgroundColor: `${bgColor}dd` }}
-      >
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: `${primaryColor}20` }}
-            >
-              <Scissors className="w-5 h-5" style={{ color: primaryColor }} />
-            </div>
-            <div>
-              <h1 className="font-heading font-bold text-xl uppercase text-white">{barbershop.name}</h1>
-              {barbershop.address && (
-                <p className="text-xs text-gray-400 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {barbershop.address}
-                </p>
+      {/* Gallery Modal */}
+      {showGallery && (
+        <GalleryModal 
+          images={data.barbershop.gallery_images} 
+          onClose={() => setShowGallery(false)} 
+        />
+      )}
+
+      {/* Header with Banner */}
+      <header className="relative">
+        {data.barbershop.banner_url ? (
+          <div 
+            className="h-48 bg-cover bg-center"
+            style={{ backgroundImage: `url(${data.barbershop.banner_url})` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70" />
+          </div>
+        ) : (
+          <div className="h-32" style={{ backgroundColor: bgColor }} />
+        )}
+        
+        {/* Logo and Name */}
+        <div className="absolute bottom-0 left-0 right-0 transform translate-y-1/2 px-4">
+          <div className="max-w-2xl mx-auto flex items-end gap-4">
+            {data.barbershop.logo_url ? (
+              <img 
+                src={data.barbershop.logo_url} 
+                alt={data.barbershop.name}
+                className="w-20 h-20 rounded-xl border-4 object-cover"
+                style={{ borderColor: bgColor }}
+              />
+            ) : (
+              <div 
+                className="w-20 h-20 rounded-xl border-4 flex items-center justify-center"
+                style={{ borderColor: bgColor, backgroundColor: primaryColor }}
+              >
+                <Scissors className="w-8 h-8 text-black" />
+              </div>
+            )}
+            <div className="pb-2">
+              <h1 
+                className="text-2xl font-bold text-white drop-shadow-lg"
+                style={{ fontFamily: fontStyle }}
+              >
+                {data.barbershop.name}
+              </h1>
+              {data.barbershop.description && (
+                <p className="text-white/80 text-sm drop-shadow">{data.barbershop.description}</p>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
-        {/* Progress */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {['service', 'datetime', 'info'].map((s, i) => (
-            <div
-              key={s}
-              className="w-3 h-3 rounded-full transition-colors"
-              style={{
-                backgroundColor: steps.indexOf(step) >= steps.indexOf(s === 'datetime' ? 'professional' : s)
-                  ? primaryColor
-                  : '#374151'
-              }}
-            />
-          ))}
+      {/* Info Bar */}
+      <div className="pt-14 pb-4 px-4" style={{ backgroundColor: bgColor }}>
+        <div className="max-w-2xl mx-auto">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            {/* Location */}
+            {data.barbershop.address && (
+              <a
+                href={data.barbershop.latitude && data.barbershop.longitude 
+                  ? `https://www.google.com/maps?q=${data.barbershop.latitude},${data.barbershop.longitude}`
+                  : `https://www.google.com/maps/search/${encodeURIComponent(data.barbershop.address)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <MapPin className="w-4 h-4" style={{ color: primaryColor }} />
+                <span className="truncate max-w-[200px]">{data.barbershop.address}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            
+            {/* Phone */}
+            {data.barbershop.phone && (
+              <a
+                href={`tel:${data.barbershop.phone}`}
+                className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <Phone className="w-4 h-4" style={{ color: primaryColor }} />
+                {data.barbershop.phone}
+              </a>
+            )}
+
+            {/* About */}
+            {data.barbershop.about_text && (
+              <button
+                onClick={() => setShowAbout(!showAbout)}
+                className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <Info className="w-4 h-4" style={{ color: primaryColor }} />
+                Sobre
+              </button>
+            )}
+
+            {/* Gallery */}
+            {data.barbershop.gallery_images?.length > 0 && (
+              <button
+                onClick={() => setShowGallery(true)}
+                className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <Image className="w-4 h-4" style={{ color: primaryColor }} />
+                Galeria ({data.barbershop.gallery_images.length})
+              </button>
+            )}
+
+            {/* Social Links */}
+            <div className="flex items-center gap-2 ml-auto">
+              {data.barbershop.instagram_url && (
+                <a
+                  href={data.barbershop.instagram_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  style={{ color: primaryColor }}
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+              )}
+              {data.barbershop.facebook_url && (
+                <a
+                  href={data.barbershop.facebook_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  style={{ color: primaryColor }}
+                >
+                  <Facebook className="w-5 h-5" />
+                </a>
+              )}
+              {data.barbershop.whatsapp_number && (
+                <a
+                  href={`https://wa.me/${data.barbershop.whatsapp_number.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  style={{ color: primaryColor }}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* About Section (Collapsible) */}
+          {showAbout && data.barbershop.about_text && (
+            <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
+              <h3 className="font-semibold mb-2 text-white" style={{ fontFamily: fontStyle }}>
+                Sobre Nós
+              </h3>
+              <p className="text-gray-300 text-sm whitespace-pre-wrap">{data.barbershop.about_text}</p>
+              
+              {/* Business Hours */}
+              {data.business_hours?.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <h4 className="font-semibold text-sm mb-2 text-white">Horário de Funcionamento</h4>
+                  <div className="grid grid-cols-2 gap-1 text-sm">
+                    {formatBusinessHours().map((h, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className="text-gray-400">{h.day}</span>
+                        <span className={h.hours === 'Fechado' ? 'text-red-400' : 'text-gray-300'}>
+                          {h.hours}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Gallery Preview (Horizontal Scroll) */}
+      {data.barbershop.gallery_images?.length > 0 && (
+        <div className="px-4 pb-4" style={{ backgroundColor: bgColor }}>
+          <div className="max-w-2xl mx-auto">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {data.barbershop.gallery_images.slice(0, 5).map((url, index) => (
+                <button
+                  key={index}
+                  onClick={() => setShowGallery(true)}
+                  className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-colors"
+                >
+                  <img src={url} alt={`Trabalho ${index + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+              {data.barbershop.gallery_images.length > 5 && (
+                <button
+                  onClick={() => setShowGallery(true)}
+                  className="flex-shrink-0 w-24 h-24 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                >
+                  +{data.barbershop.gallery_images.length - 5}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="h-px bg-white/10" />
+
+      {/* Main Content */}
+      <main className="max-w-2xl mx-auto px-4 py-6" style={{ backgroundColor: bgColor }}>
+        {/* Progress Steps */}
+        <div className="flex items-center justify-between mb-6">
+          {step !== 'service' && (
+            <Button variant="ghost" onClick={goBack} className="text-gray-400 hover:text-white">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {['service', 'datetime', 'info'].map((s, index) => (
+              <div key={s} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                    steps.indexOf(step) >= steps.indexOf(s)
+                      ? 'text-black'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}
+                  style={steps.indexOf(step) >= steps.indexOf(s) ? { backgroundColor: primaryColor } : {}}
+                >
+                  {index + 1}
+                </div>
+                {index < 2 && (
+                  <div className={`w-8 h-0.5 ${steps.indexOf(step) > steps.indexOf(s) ? '' : 'bg-gray-700'}`}
+                    style={steps.indexOf(step) > steps.indexOf(s) ? { backgroundColor: primaryColor } : {}}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Back Button */}
-        {step !== 'service' && (
-          <Button
-            variant="ghost"
-            onClick={goBack}
-            className="mb-4 text-white hover:bg-white/10"
-            data-testid="back-button"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
-        )}
-
-        {/* Step: Service Selection */}
+        {/* Step: Select Service */}
         {step === 'service' && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase text-white">Escolha o Serviço</h2>
-            {services.length === 0 ? (
-              <Card className="border-gray-700 bg-gray-800/50">
-                <CardContent className="py-8 text-center text-gray-400">
-                  Nenhum serviço disponível no momento.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-3">
-                {services.map((service) => (
-                  <Card
-                    key={service.service_id}
-                    className="border-gray-700 bg-gray-800/50 hover:border-opacity-50 cursor-pointer transition-all"
-                    style={{ '--hover-border': primaryColor }}
-                    onClick={() => handleServiceSelect(service)}
-                    data-testid={`service-option-${service.service_id}`}
-                  >
-                    <CardContent className="py-4 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-lg text-white">{service.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            {service.duration} min
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xl font-bold" style={{ color: primaryColor }}>
-                        {formatCurrency(service.price)}
-                      </span>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step: Professional Selection */}
-        {step === 'professional' && (
-          <div className="space-y-4 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase text-white">Escolha o Profissional</h2>
+            <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
+              Escolha o Serviço
+            </h2>
             <div className="grid gap-3">
-              <Card
-                className="border-gray-700 bg-gray-800/50 hover:border-opacity-50 cursor-pointer transition-all"
-                onClick={() => handleProfessionalSelect(null)}
-                data-testid="professional-any"
-              >
-                <CardContent className="py-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                    <User className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">Sem preferência</h3>
-                    <p className="text-sm text-gray-400">Qualquer profissional disponível</p>
-                  </div>
-                </CardContent>
-              </Card>
-              {professionals.map((prof) => (
-                <Card
-                  key={prof.professional_id}
-                  className="border-gray-700 bg-gray-800/50 hover:border-opacity-50 cursor-pointer transition-all"
-                  onClick={() => handleProfessionalSelect(prof)}
-                  data-testid={`professional-option-${prof.professional_id}`}
+              {data.services.map((service) => (
+                <button
+                  key={service.service_id}
+                  onClick={() => handleServiceSelect(service)}
+                  className="w-full p-4 rounded-lg border border-gray-700 hover:border-opacity-50 text-left transition-all bg-gray-800/50 hover:bg-gray-800"
+                  style={{ '--hover-border': primaryColor }}
+                  data-testid={`service-${service.service_id}`}
                 >
-                  <CardContent className="py-4 flex items-center gap-4">
-                    <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: `${primaryColor}20` }}
-                    >
-                      <span className="font-bold text-lg" style={{ color: primaryColor }}>
-                        {prof.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                  <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-medium text-white">{prof.name}</h3>
+                      <h3 className="font-medium text-white">{service.name}</h3>
+                      {service.description && (
+                        <p className="text-sm text-gray-400 mt-1">{service.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {service.duration} min
+                        </span>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                    <span className="font-bold text-lg" style={{ color: primaryColor }}>
+                      {formatCurrency(service.price)}
+                    </span>
+                  </div>
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Step: Date & Time Selection */}
+        {/* Step: Select Professional */}
+        {step === 'professional' && (
+          <div className="space-y-4 animate-fade-in">
+            <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
+              Escolha o Profissional
+            </h2>
+            <div className="grid gap-3">
+              <button
+                onClick={() => handleProfessionalSelect(null)}
+                className="w-full p-4 rounded-lg border border-gray-700 hover:border-opacity-50 text-left transition-all bg-gray-800/50 hover:bg-gray-800"
+                data-testid="professional-any"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${primaryColor}20` }}>
+                    <User className="w-6 h-6" style={{ color: primaryColor }} />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-white">Sem preferência</h3>
+                    <p className="text-sm text-gray-400">Qualquer profissional disponível</p>
+                  </div>
+                </div>
+              </button>
+              {data.professionals.map((prof) => (
+                <button
+                  key={prof.professional_id}
+                  onClick={() => handleProfessionalSelect(prof)}
+                  className="w-full p-4 rounded-lg border border-gray-700 hover:border-opacity-50 text-left transition-all bg-gray-800/50 hover:bg-gray-800"
+                  data-testid={`professional-${prof.professional_id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${primaryColor}20` }}>
+                      <User className="w-6 h-6" style={{ color: primaryColor }} />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-white">{prof.name}</h3>
+                      {prof.specialty && (
+                        <p className="text-sm text-gray-400">{prof.specialty}</p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step: Select Date & Time */}
         {step === 'datetime' && (
-          <div className="space-y-6 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase text-white">Escolha a Data e Horário</h2>
+          <div className="space-y-4 animate-fade-in">
+            <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
+              Data e Horário
+            </h2>
             
             <Card className="border-gray-700 bg-gray-800/50">
               <CardContent className="py-4">
@@ -470,17 +706,18 @@ export default function PublicBookingPage() {
                   mode="single"
                   selected={booking.date}
                   onSelect={handleDateSelect}
-                  locale={ptBR}
                   disabled={(date) => isBefore(date, startOfToday())}
-                  className="mx-auto"
+                  locale={ptBR}
+                  className="rounded-md"
                 />
               </CardContent>
             </Card>
 
             {booking.date && (
               <div className="space-y-3">
-                <h3 className="font-medium text-white">
-                  Horários disponíveis em {format(booking.date, "dd 'de' MMMM", { locale: ptBR })}
+                <h3 className="font-medium text-white flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4" style={{ color: primaryColor }} />
+                  Horários disponíveis para {format(booking.date, "dd 'de' MMMM", { locale: ptBR })}
                 </h3>
                 
                 {loadingSlots ? (
@@ -490,26 +727,19 @@ export default function PublicBookingPage() {
                     ))}
                   </div>
                 ) : availableSlots.length === 0 ? (
-                  <Card className="border-gray-700 bg-gray-800/30">
-                    <CardContent className="py-6 text-center text-gray-400">
-                      Nenhum horário disponível nesta data. Escolha outra data.
-                    </CardContent>
-                  </Card>
+                  <p className="text-gray-400 text-center py-4">
+                    Nenhum horário disponível nesta data
+                  </p>
                 ) : (
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {availableSlots.map((slot) => (
                       <Button
                         key={slot.time}
-                        variant="outline"
+                        variant={booking.time === slot.time ? "default" : "outline"}
                         onClick={() => handleTimeSelect(slot.time)}
-                        className="btn-press border-gray-700 text-white hover:text-white"
-                        style={booking.time === slot.time ? { 
-                          backgroundColor: primaryColor, 
-                          borderColor: primaryColor 
-                        } : {
-                          backgroundColor: 'transparent'
-                        }}
-                        data-testid={`time-slot-${slot.time}`}
+                        className={booking.time === slot.time ? 'text-black' : 'border-gray-700 text-white'}
+                        style={booking.time === slot.time ? { backgroundColor: primaryColor } : {}}
+                        data-testid={`time-${slot.time}`}
                       >
                         {slot.time}
                       </Button>
@@ -524,7 +754,9 @@ export default function PublicBookingPage() {
         {/* Step: Client Info */}
         {step === 'info' && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-heading text-2xl uppercase text-white">Seus Dados</h2>
+            <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
+              Seus Dados
+            </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -544,7 +776,7 @@ export default function PublicBookingPage() {
                 )}
                 {vipInfo.is_vip && (
                   <div className="flex items-center gap-2 text-yellow-500 text-sm">
-                    <span>🌟</span>
+                    <Star className="w-4 h-4" fill="currentColor" />
                     <span>Cliente VIP! Você tem {vipInfo.discount_percentage}% de desconto.</span>
                   </div>
                 )}
@@ -574,9 +806,6 @@ export default function PublicBookingPage() {
                   className="bg-gray-800 border-gray-700 text-white"
                   data-testid="client-email-input"
                 />
-                <p className="text-xs text-gray-400">
-                  Receba confirmação e lembretes por email
-                </p>
               </div>
 
               {/* Summary */}
@@ -604,24 +833,21 @@ export default function PublicBookingPage() {
                     </div>
                   )}
                   
-                  {/* Show VIP discount in summary */}
                   {vipInfo.is_vip && vipInfo.discount_percentage > 0 ? (
-                    <>
-                      <div className="pt-2 border-t border-gray-700">
-                        <div className="flex justify-between text-gray-400">
-                          <span>Valor original</span>
-                          <span className="line-through">{formatCurrency(booking.service?.price || 0)}</span>
-                        </div>
-                        <div className="flex justify-between text-yellow-500">
-                          <span>🌟 Desconto VIP ({vipInfo.discount_percentage}%)</span>
-                          <span>-{formatCurrency((booking.service?.price || 0) * vipInfo.discount_percentage / 100)}</span>
-                        </div>
-                        <div className="flex justify-between font-medium mt-1">
-                          <span className="text-white">Total</span>
-                          <span style={{ color: primaryColor }}>{formatCurrency(calculateFinalPrice())}</span>
-                        </div>
+                    <div className="pt-2 border-t border-gray-700">
+                      <div className="flex justify-between text-gray-400">
+                        <span>Valor original</span>
+                        <span className="line-through">{formatCurrency(booking.service?.price || 0)}</span>
                       </div>
-                    </>
+                      <div className="flex justify-between text-yellow-500">
+                        <span>🌟 Desconto VIP ({vipInfo.discount_percentage}%)</span>
+                        <span>-{formatCurrency((booking.service?.price || 0) * vipInfo.discount_percentage / 100)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium mt-1">
+                        <span className="text-white">Total</span>
+                        <span style={{ color: primaryColor }}>{formatCurrency(calculateFinalPrice())}</span>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex justify-between pt-2 border-t border-gray-700 font-medium">
                       <span className="text-white">Total</span>
@@ -633,17 +859,31 @@ export default function PublicBookingPage() {
 
               <Button
                 type="submit"
-                className="w-full btn-press text-lg h-12 text-white"
+                className="w-full btn-press text-lg h-12 text-black"
                 style={{ backgroundColor: primaryColor }}
                 disabled={submitting}
                 data-testid="confirm-booking-button"
               >
-                {submitting ? 'Confirmando...' : 'Confirmar Agendamento'}
+                {submitting ? 'Agendando...' : 'Confirmar Agendamento'}
               </Button>
             </form>
           </div>
         )}
       </main>
+
+      {/* Fixed WhatsApp Button */}
+      {data.barbershop.whatsapp_number && (
+        <a
+          href={`https://wa.me/${data.barbershop.whatsapp_number.replace(/\D/g, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 p-4 rounded-full shadow-lg z-40 text-black"
+          style={{ backgroundColor: primaryColor }}
+          data-testid="whatsapp-float-button"
+        >
+          <MessageCircle className="w-6 h-6" />
+        </a>
+      )}
     </div>
   );
 }
