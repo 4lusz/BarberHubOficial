@@ -528,6 +528,29 @@ export default function PublicBookingPage() {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="clientPhone" className="text-white">WhatsApp *</Label>
+                <Input
+                  id="clientPhone"
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  value={booking.clientPhone}
+                  onChange={handlePhoneChange}
+                  required
+                  className="bg-gray-800 border-gray-700 text-white"
+                  data-testid="client-phone-input"
+                />
+                {checkingVip && (
+                  <p className="text-xs text-gray-400">Verificando...</p>
+                )}
+                {vipInfo.is_vip && (
+                  <div className="flex items-center gap-2 text-yellow-500 text-sm">
+                    <span>🌟</span>
+                    <span>Cliente VIP! Você tem {vipInfo.discount_percentage}% de desconto.</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="clientName" className="text-white">Nome completo *</Label>
                 <Input
                   id="clientName"
@@ -537,20 +560,6 @@ export default function PublicBookingPage() {
                   required
                   className="bg-gray-800 border-gray-700 text-white"
                   data-testid="client-name-input"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="clientPhone" className="text-white">WhatsApp *</Label>
-                <Input
-                  id="clientPhone"
-                  type="tel"
-                  placeholder="(11) 99999-9999"
-                  value={booking.clientPhone}
-                  onChange={(e) => setBooking({ ...booking, clientPhone: e.target.value })}
-                  required
-                  className="bg-gray-800 border-gray-700 text-white"
-                  data-testid="client-phone-input"
                 />
               </div>
 
@@ -594,10 +603,31 @@ export default function PublicBookingPage() {
                       <span className="text-white">{booking.professional.name}</span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-2 border-t border-gray-700 font-medium">
-                    <span className="text-white">Total</span>
-                    <span style={{ color: primaryColor }}>{formatCurrency(booking.service?.price || 0)}</span>
-                  </div>
+                  
+                  {/* Show VIP discount in summary */}
+                  {vipInfo.is_vip && vipInfo.discount_percentage > 0 ? (
+                    <>
+                      <div className="pt-2 border-t border-gray-700">
+                        <div className="flex justify-between text-gray-400">
+                          <span>Valor original</span>
+                          <span className="line-through">{formatCurrency(booking.service?.price || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-yellow-500">
+                          <span>🌟 Desconto VIP ({vipInfo.discount_percentage}%)</span>
+                          <span>-{formatCurrency((booking.service?.price || 0) * vipInfo.discount_percentage / 100)}</span>
+                        </div>
+                        <div className="flex justify-between font-medium mt-1">
+                          <span className="text-white">Total</span>
+                          <span style={{ color: primaryColor }}>{formatCurrency(calculateFinalPrice())}</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between pt-2 border-t border-gray-700 font-medium">
+                      <span className="text-white">Total</span>
+                      <span style={{ color: primaryColor }}>{formatCurrency(booking.service?.price || 0)}</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
