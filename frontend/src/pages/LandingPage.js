@@ -298,15 +298,93 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-12 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Scissors className="w-6 h-6 text-primary" />
-              <span className="font-heading font-bold text-xl uppercase">
-                <span className="text-primary">Barber</span>Hub
-              </span>
+          {/* Main Footer Content */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <Link to="/" className="flex items-center gap-2 mb-4">
+                <Scissors className="w-6 h-6 text-primary" />
+                <span className="font-heading font-bold text-xl uppercase">
+                  <span className="text-primary">Barber</span>Hub
+                </span>
+              </Link>
+              <p className="text-sm text-muted-foreground">
+                A plataforma completa de agendamento para barbearias modernas.
+              </p>
             </div>
+
+            {/* Links */}
+            <div>
+              <h4 className="font-heading font-bold uppercase text-sm mb-4">Links Úteis</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <Link to="/faq" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+                    <HelpCircle className="w-4 h-4" />
+                    Perguntas Frequentes
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/login" className="text-muted-foreground hover:text-primary transition-colors">
+                    Entrar na Conta
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/cadastro" className="text-muted-foreground hover:text-primary transition-colors">
+                    Criar Conta
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-heading font-bold uppercase text-sm mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <Link to="/termos" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Termos de Uso
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/privacidade" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    Política de Privacidade
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className="font-heading font-bold uppercase text-sm mb-4">Contato</h4>
+              <a 
+                href="mailto:barberhub44@gmail.com" 
+                className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 text-sm"
+              >
+                <Mail className="w-4 h-4" />
+                barberhub44@gmail.com
+              </a>
+              <p className="text-xs text-muted-foreground mt-4">
+                Responderemos em até 24 horas úteis
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} BarberHub. Todos os direitos reservados.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Feito com 💈 para barbearias{' '}
+              <Link 
+                to="/super-admin" 
+                className="text-muted-foreground/50 hover:text-primary transition-colors"
+                title="Área restrita"
+              >
+                brasileiras
+              </Link>
             </p>
           </div>
         </div>
