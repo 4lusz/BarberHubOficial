@@ -892,55 +892,115 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
         }
     
     # Real Mercado Pago integration
+    # Using Preapproval (Subscriptions) API for recurring billing
     try:
-        preference_data = {
-            "items": [{
-                "id": data.plan_id,
-                "title": plan["name"],
-                "description": f"Assinatura mensal - {plan['name']}",
-                "currency_id": "BRL",
-                "quantity": 1,
-                "unit_price": plan["price"]
-            }],
-            "payer": {
-                "email": data.customer_email,
-                "name": data.customer_name,
-                "identification": {
-                    "type": "CPF",
-                    "number": data.customer_document
-                }
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://barberhubpro.com.br')
+        
+        # Create preapproval (subscription) for automatic recurring billing
+        preapproval_data = {
+            "reason": f"BarberHub - {plan['name']}",
+            "auto_recurring": {
+                "frequency": 1,
+                "frequency_type": "months",
+                "transaction_amount": plan["price"],
+                "currency_id": "BRL"
             },
-            "back_urls": {
-                "success": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/sucesso",
-                "failure": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/erro",
-                "pending": f"{os.environ.get('FRONTEND_URL', '')}/pagamento/pendente"
-            },
-            "auto_return": "approved",
+            "back_url": f"{frontend_url}/pagamento/sucesso?plan={data.plan_id}",
+            "payer_email": data.customer_email,
             "external_reference": f"{current_user['user_id']}_{data.plan_id}_{datetime.now(timezone.utc).timestamp()}"
         }
         
         async with httpx.AsyncClient() as client_http:
             resp = await client_http.post(
-                "https://api.mercadopago.com/checkout/preferences",
-                json=preference_data,
+                "https://api.mercadopago.com/preapproval",
+                json=preapproval_data,
                 headers={
                     "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
                     "Content-Type": "application/json"
                 }
             )
-            resp.raise_for_status()
+            
+            if resp.status_code not in [200, 201]:
+                logger.error(f"Mercado Pago preapproval error: {resp.status_code} - {resp.text}")
+                # Fallback to simple checkout if preapproval fails
+                return await create_simple_checkout(data, plan, current_user)
+            
             mp_response = resp.json()
+            
+            # Store subscription info
+            await db.subscriptions.update_one(
+                {"user_id": current_user["user_id"]},
+                {"$set": {
+                    "user_id": current_user["user_id"],
+                    "plan_id": data.plan_id,
+                    "mp_preapproval_id": mp_response.get("id"),
+                    "status": "pending",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
         
         return {
             "success": True,
             "payment_url": mp_response.get("init_point"),
-            "preference_id": mp_response.get("id"),
-            "plan": plan
+            "subscription_id": mp_response.get("id"),
+            "plan": plan,
+            "recurring": True
         }
         
     except Exception as e:
         logger.error(f"Mercado Pago error: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao processar pagamento")
+
+async def create_simple_checkout(data: SubscriptionPayment, plan: dict, current_user: dict):
+    """Fallback to simple checkout preference (non-recurring)"""
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://barberhubpro.com.br')
+    
+    preference_data = {
+        "items": [{
+            "id": data.plan_id,
+            "title": plan["name"],
+            "description": f"Assinatura mensal - {plan['name']}",
+            "currency_id": "BRL",
+            "quantity": 1,
+            "unit_price": plan["price"]
+        }],
+        "payer": {
+            "email": data.customer_email,
+            "name": data.customer_name,
+            "identification": {
+                "type": "CPF",
+                "number": data.customer_document
+            }
+        },
+        "back_urls": {
+            "success": f"{frontend_url}/pagamento/sucesso?plan={data.plan_id}",
+            "failure": f"{frontend_url}/pagamento/erro",
+            "pending": f"{frontend_url}/pagamento/pendente"
+        },
+        "auto_return": "approved",
+        "external_reference": f"{current_user['user_id']}_{data.plan_id}_{datetime.now(timezone.utc).timestamp()}"
+    }
+    
+    async with httpx.AsyncClient() as client_http:
+        resp = await client_http.post(
+            "https://api.mercadopago.com/checkout/preferences",
+            json=preference_data,
+            headers={
+                "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                "Content-Type": "application/json"
+            }
+        )
+        resp.raise_for_status()
+        mp_response = resp.json()
+    
+    return {
+        "success": True,
+        "payment_url": mp_response.get("init_point"),
+        "preference_id": mp_response.get("id"),
+        "plan": plan,
+        "recurring": False
+    }
 
 @api_router.post("/webhooks/mercadopago")
 async def mercadopago_webhook(request: Request):
