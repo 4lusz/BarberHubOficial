@@ -51,6 +51,7 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Lembretes 30 min antes
 - [x] Notificações de renovação/falha de pagamento
 - [x] Localização (Google Maps) incluída
+- [x] **Padronização de números para formato brasileiro E.164 (+55DDNNNNNNNNN)**
 
 ### Relatórios (Premium)
 - [x] Relatório diário/semanal
@@ -135,6 +136,7 @@ POST /api/barbershops/upload/banner   - Upload de banner
 POST /api/barbershops/upload/gallery  - Adicionar imagem à galeria
 DELETE /api/barbershops/gallery       - Remover imagem da galeria
 PUT /api/barbershops                  - Atualizar dados e personalização
+POST /api/utils/normalize-phone       - Normalizar número de telefone brasileiro
 ```
 
 ---
@@ -170,17 +172,38 @@ URLs servidas em: `/api/uploads/{tipo}/{arquivo}`
 - [x] Galeria de trabalhos
 - [x] Informações enriquecidas (mapa, horários, sobre)
 - [x] Redes sociais na página pública
+- [x] **Padronização automática de telefones brasileiros**
 
 ### P1 - Melhorias Futuras
+- [ ] Programa de fidelidade visível na página pública
+- [ ] Métricas avançadas (taxa de ocupação, clientes novos vs recorrentes)
 - [ ] Refatorar backend em módulos
-- [ ] Métricas avançadas (taxa de ocupação)
 - [ ] Push notifications
 
 ### P2 - Nice to Have
+- [ ] Escolha de profissional pelo perfil (com foto e bio)
 - [ ] Integração Google Calendar
 - [ ] App mobile nativo
 - [ ] Sistema de avaliações
-- [ ] Programa de fidelidade
+
+---
+
+## Normalização de Telefones
+
+O sistema normaliza automaticamente todos os números de telefone para o formato E.164 brasileiro:
+
+| Entrada | Saída |
+|---------|-------|
+| (64) 99976-6685 | +5564999766685 |
+| 64999766685 | +5564999766685 |
+| +5564999766685 | +5564999766685 |
+| 11987654321 | +5511987654321 |
+
+### Componente PhoneInput
+- Validação em tempo real com feedback visual (verde/vermelho)
+- Aceita qualquer formato de entrada
+- Preview do número formatado
+- Usado em: Agendamento, Configurações, Clientes VIP
 
 ---
 
