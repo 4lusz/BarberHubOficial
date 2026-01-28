@@ -233,6 +233,11 @@ export default function PublicBookingPage() {
   }
 
   if (success) {
+    const finalPrice = successData?.final_price || calculateFinalPrice();
+    const originalPrice = successData?.original_price || booking.service?.price || 0;
+    const discountApplied = successData?.discount_percentage || (vipInfo.is_vip ? vipInfo.discount_percentage : 0);
+    const isVip = successData?.is_vip || vipInfo.is_vip;
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-border text-center border-green-500/30 bg-green-500/5">
@@ -242,7 +247,7 @@ export default function PublicBookingPage() {
             </div>
             <h2 className="font-heading text-2xl uppercase mb-2">Agendamento Confirmado!</h2>
             <p className="text-muted-foreground mb-6">
-              Seu horário foi reservado com sucesso. Você receberá uma confirmação por email.
+              Seu horário foi reservado com sucesso. Você receberá uma confirmação por WhatsApp.
             </p>
             <div className="bg-secondary/50 rounded-lg p-4 text-left space-y-2 mb-6">
               <p><strong>Serviço:</strong> {booking.service.name}</p>
@@ -251,11 +256,29 @@ export default function PublicBookingPage() {
               {booking.professional && (
                 <p><strong>Profissional:</strong> {booking.professional.name}</p>
               )}
-              <p><strong>Valor:</strong> {formatCurrency(booking.service.price)}</p>
+              {isVip && discountApplied > 0 ? (
+                <>
+                  <div className="pt-2 border-t border-gray-600">
+                    <p className="text-yellow-500 font-semibold flex items-center gap-1">
+                      <span>🌟</span> Cliente VIP!
+                    </p>
+                    <p className="text-gray-400 line-through text-sm">
+                      Valor original: {formatCurrency(originalPrice)}
+                    </p>
+                    <p className="text-green-400 font-semibold">
+                      Com desconto de {discountApplied}%: {formatCurrency(finalPrice)}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p><strong>Valor:</strong> {formatCurrency(originalPrice)}</p>
+              )}
             </div>
             <Button 
               onClick={() => {
                 setSuccess(false);
+                setSuccessData(null);
+                setVipInfo({ is_vip: false, discount_percentage: 0 });
                 setStep('service');
                 setBooking({
                   service: null,
