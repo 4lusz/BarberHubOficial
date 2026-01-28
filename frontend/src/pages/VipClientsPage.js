@@ -240,10 +240,11 @@ export default function VipClientsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>WhatsApp *</Label>
-                  <Input
-                    placeholder="(00) 00000-0000"
+                  <PhoneInput
+                    placeholder="(64) 99976-6685"
                     value={formData.client_phone}
                     onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
+                    onNormalized={(normalized) => setFormData({ ...formData, client_phone: normalized })}
                     data-testid="vip-phone-input"
                   />
                 </div>
