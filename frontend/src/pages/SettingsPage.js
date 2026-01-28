@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
+import { PhoneInput } from '../components/ui/phone-input';
 import { 
   Settings, 
   Store, 
@@ -320,12 +321,12 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone/WhatsApp</Label>
-                  <Input
+                  <PhoneInput
                     id="phone"
-                    type="tel"
-                    placeholder="(11) 99999-9999"
+                    placeholder="(64) 99976-6685"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onNormalized={(normalized) => setFormData({ ...formData, phone: normalized })}
                     data-testid="barbershop-phone-input"
                   />
                 </div>
@@ -742,11 +743,12 @@ export default function SettingsPage() {
                   <MessageCircle className="w-4 h-4" />
                   WhatsApp para Contato Direto
                 </Label>
-                <Input
+                <PhoneInput
                   id="whatsapp_number"
-                  placeholder="5511999999999 (apenas números)"
+                  placeholder="(64) 99976-6685"
                   value={formData.whatsapp_number}
                   onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                  onNormalized={(normalized) => setFormData({ ...formData, whatsapp_number: normalized })}
                   data-testid="whatsapp-input"
                 />
                 <p className="text-xs text-muted-foreground">
