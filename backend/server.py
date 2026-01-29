@@ -3598,6 +3598,109 @@ Obrigado por usar o BarberHub! 💈"""
         ]
     }
 
+@api_router.post("/super-admin/cleanup-database")
+async def super_admin_cleanup_database(admin: dict = Depends(verify_super_admin)):
+    """Clean database keeping only demo-premium account"""
+    
+    # Get demo-premium barbershop
+    demo_barbershop = await db.barbershops.find_one({"slug": "demo-premium"})
+    demo_barbershop_id = demo_barbershop["barbershop_id"] if demo_barbershop else None
+    
+    # Get demo user
+    demo_user = await db.users.find_one({"email": "demo@barberpro.com"})
+    demo_user_id = demo_user["user_id"] if demo_user else None
+    
+    deleted_counts = {}
+    
+    # Delete all barbershops except demo-premium
+    if demo_barbershop_id:
+        result = await db.barbershops.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["barbershops"] = result.deleted_count
+    else:
+        result = await db.barbershops.delete_many({})
+        deleted_counts["barbershops"] = result.deleted_count
+    
+    # Delete all users except demo user and clients
+    if demo_user_id:
+        result = await db.users.delete_many({
+            "user_id": {"$ne": demo_user_id},
+            "role": "barber"
+        })
+        deleted_counts["barber_users"] = result.deleted_count
+    else:
+        result = await db.users.delete_many({"role": "barber"})
+        deleted_counts["barber_users"] = result.deleted_count
+    
+    # Delete all services except demo's
+    if demo_barbershop_id:
+        result = await db.services.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["services"] = result.deleted_count
+    else:
+        result = await db.services.delete_many({})
+        deleted_counts["services"] = result.deleted_count
+    
+    # Delete all professionals except demo's
+    if demo_barbershop_id:
+        result = await db.professionals.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["professionals"] = result.deleted_count
+    else:
+        result = await db.professionals.delete_many({})
+        deleted_counts["professionals"] = result.deleted_count
+    
+    # Delete all appointments except demo's
+    if demo_barbershop_id:
+        result = await db.appointments.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["appointments"] = result.deleted_count
+    else:
+        result = await db.appointments.delete_many({})
+        deleted_counts["appointments"] = result.deleted_count
+    
+    # Delete all subscriptions except demo's
+    if demo_barbershop_id:
+        result = await db.subscriptions.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["subscriptions"] = result.deleted_count
+    else:
+        result = await db.subscriptions.delete_many({})
+        deleted_counts["subscriptions"] = result.deleted_count
+    
+    # Delete all VIP clients except demo's
+    if demo_barbershop_id:
+        result = await db.vip_clients.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["vip_clients"] = result.deleted_count
+    else:
+        result = await db.vip_clients.delete_many({})
+        deleted_counts["vip_clients"] = result.deleted_count
+    
+    # Delete all blocked times except demo's
+    if demo_barbershop_id:
+        result = await db.blocked_times.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["blocked_times"] = result.deleted_count
+    else:
+        result = await db.blocked_times.delete_many({})
+        deleted_counts["blocked_times"] = result.deleted_count
+    
+    # Delete all payments except demo's
+    if demo_barbershop_id:
+        result = await db.payments.delete_many({"barbershop_id": {"$ne": demo_barbershop_id}})
+        deleted_counts["payments"] = result.deleted_count
+    else:
+        result = await db.payments.delete_many({})
+        deleted_counts["payments"] = result.deleted_count
+    
+    # Clean client users (keep structure but remove all)
+    result = await db.users.delete_many({"role": "client"})
+    deleted_counts["client_users"] = result.deleted_count
+    
+    return {
+        "success": True,
+        "message": "Banco de dados limpo com sucesso!",
+        "kept": {
+            "demo_barbershop": demo_barbershop_id,
+            "demo_user": demo_user_id
+        },
+        "deleted": deleted_counts
+    }
+
 
 # ==================== MAIN APP SETUP ====================
 
