@@ -3368,6 +3368,35 @@ async def super_admin_update_barbershop_status(
     
     return {"success": True, "message": f"Status atualizado para {status}"}
 
+@api_router.delete("/super-admin/barbershops/{barbershop_id}")
+async def super_admin_delete_barbershop(
+    barbershop_id: str,
+    admin: dict = Depends(verify_super_admin)
+):
+    """Permanently delete a barbershop and all related data"""
+    
+    # Delete all related data
+    await db.services.delete_many({"barbershop_id": barbershop_id})
+    await db.professionals.delete_many({"barbershop_id": barbershop_id})
+    await db.appointments.delete_many({"barbershop_id": barbershop_id})
+    await db.subscriptions.delete_many({"barbershop_id": barbershop_id})
+    await db.vip_clients.delete_many({"barbershop_id": barbershop_id})
+    await db.blocked_times.delete_many({"barbershop_id": barbershop_id})
+    await db.payments.delete_many({"barbershop_id": barbershop_id})
+    
+    # Delete barbershop owner user
+    barbershop = await db.barbershops.find_one({"barbershop_id": barbershop_id})
+    if barbershop and barbershop.get("owner_id"):
+        await db.users.delete_one({"user_id": barbershop["owner_id"]})
+    
+    # Delete barbershop
+    result = await db.barbershops.delete_one({"barbershop_id": barbershop_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    return {"success": True, "message": "Barbearia e dados relacionados deletados"}
+
 @api_router.get("/super-admin/subscriptions")
 async def super_admin_list_subscriptions(admin: dict = Depends(verify_super_admin)):
     """List all subscriptions"""
