@@ -1047,7 +1047,9 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
     # Real Mercado Pago integration
     # Using Preapproval (Subscriptions) API for recurring billing
     try:
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://barberhubpro.com.br')
+        frontend_url = os.environ.get('FRONTEND_URL', '')
+        if not frontend_url:
+            raise HTTPException(status_code=500, detail="FRONTEND_URL não configurado")
         
         # Create preapproval (subscription) for automatic recurring billing
         preapproval_data = {
@@ -1107,7 +1109,9 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
 
 async def create_simple_checkout(data: SubscriptionPayment, plan: dict, current_user: dict):
     """Fallback to simple checkout preference (non-recurring)"""
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://barberhubpro.com.br')
+    frontend_url = os.environ.get('FRONTEND_URL', '')
+    if not frontend_url:
+        raise HTTPException(status_code=500, detail="FRONTEND_URL não configurado")
     
     preference_data = {
         "items": [{
