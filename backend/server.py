@@ -1997,15 +1997,27 @@ async def get_appointments(
     
     appointments = await db.appointments.find(query, {"_id": 0}).sort("time", 1).to_list(1000)
     
+    # Batch fetch all services and professionals to avoid N+1 queries
+    service_ids = list(set(apt.get("service_id") for apt in appointments if apt.get("service_id")))
+    professional_ids = list(set(apt.get("professional_id") for apt in appointments if apt.get("professional_id")))
+    
+    services = await db.services.find({"service_id": {"$in": service_ids}}, {"_id": 0}).to_list(len(service_ids))
+    professionals = await db.professionals.find({"professional_id": {"$in": professional_ids}}, {"_id": 0}).to_list(len(professional_ids))
+    
+    # Create lookup dictionaries
+    services_map = {s["service_id"]: s for s in services}
+    professionals_map = {p["professional_id"]: p for p in professionals}
+    
+    # Enrich appointments
     for apt in appointments:
-        service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
+        service = services_map.get(apt.get("service_id"))
         if service:
             apt["service_name"] = service["name"]
             apt["service_duration"] = service["duration"]
             apt["service_price"] = service["price"]
         
         if apt.get("professional_id"):
-            prof = await db.professionals.find_one({"professional_id": apt["professional_id"]}, {"_id": 0})
+            prof = professionals_map.get(apt["professional_id"])
             if prof:
                 apt["professional_name"] = prof["name"]
     
