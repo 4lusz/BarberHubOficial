@@ -2790,20 +2790,35 @@ async def get_clients_report(current_user: dict = Depends(get_current_user)):
     
     clients = await db.appointments.aggregate(pipeline).to_list(50)
     
+    # Batch fetch all appointments and services to avoid N+1 queries
+    client_phones = [c["_id"] for c in clients]
+    all_client_appointments = await db.appointments.find({
+        "barbershop_id": barbershop_id,
+        "client_phone": {"$in": client_phones},
+        "status": "completed"
+    }, {"_id": 0}).to_list(1000)
+    
+    # Get unique service IDs and fetch all services at once
+    service_ids = list(set(apt.get("service_id") for apt in all_client_appointments if apt.get("service_id")))
+    services = await db.services.find({"service_id": {"$in": service_ids}}, {"_id": 0}).to_list(len(service_ids))
+    services_map = {s["service_id"]: s for s in services}
+    
+    # Group appointments by phone and calculate totals
+    appointments_by_phone = {}
+    for apt in all_client_appointments:
+        phone = apt.get("client_phone")
+        if phone not in appointments_by_phone:
+            appointments_by_phone[phone] = []
+        appointments_by_phone[phone].append(apt)
+    
     # Calculate total revenue per client
     for client in clients:
-        client_appointments = await db.appointments.find({
-            "barbershop_id": barbershop_id,
-            "client_phone": client["_id"],
-            "status": "completed"
-        }, {"_id": 0}).to_list(100)
-        
-        total_spent = 0
-        for apt in client_appointments:
-            service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
-            if service:
-                total_spent += service["price"]
-        
+        phone = client["_id"]
+        client_apts = appointments_by_phone.get(phone, [])
+        total_spent = sum(
+            services_map.get(apt.get("service_id"), {}).get("price", 0) 
+            for apt in client_apts
+        )
         client["total_spent"] = total_spent
         client["phone"] = client.pop("_id")
     
