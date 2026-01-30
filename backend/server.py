@@ -1436,7 +1436,7 @@ async def handle_recurring_payment_notification(authorized_payment_id: str):
                         
                         # Send WhatsApp notification about successful renewal
                         user = await db.users.find_one({"user_id": subscription["user_id"]}, {"_id": 0})
-                        if user and user.get("phone") and RESPONDIO_API_TOKEN:
+                        if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
                             plan = SUBSCRIPTION_PLANS.get(subscription["plan_id"])
                             message = f"""✅ *Pagamento Confirmado*
 
