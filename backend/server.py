@@ -3658,10 +3658,10 @@ Obrigado por usar o BarberHub! 💈"""
             }
         ],
         "api_details": {
-            "provider": "Respond.io",
-            "endpoint": "https://api.respond.io/v2/contact/phone:{phone}/message",
-            "authentication": "Bearer Token",
-            "phone_format": "E.164 sem o + (ex: 5564999766685)"
+            "provider": "Twilio",
+            "endpoint": "https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json",
+            "authentication": "Basic Auth (Account SID + Auth Token)",
+            "phone_format": "E.164 format (ex: +5564999766685)"
         },
         "notes": [
             "As mensagens são enviadas apenas se TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_NUMBER estiverem configurados",
