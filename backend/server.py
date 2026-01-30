@@ -47,9 +47,10 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 # Mercado Pago Config
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 
-# Respond.io Config (WhatsApp API)
-RESPONDIO_API_TOKEN = os.environ.get('RESPONDIO_API_TOKEN', '')
-RESPONDIO_CHANNEL_ID = os.environ.get('RESPONDIO_CHANNEL_ID', '')
+# Twilio Config (WhatsApp API)
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', '')
 
 # Super Admin Config
 SUPER_ADMIN_PASSWORD = os.environ.get('SUPER_ADMIN_PASSWORD', 'alunyx110205')
