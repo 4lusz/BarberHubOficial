@@ -1270,7 +1270,7 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
     
     # Send WhatsApp confirmation
     user = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0})
-    if user and user.get("phone") and RESPONDIO_API_TOKEN:
+    if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
         barbershop = await db.barbershops.find_one(
             {"barbershop_id": current_user["barbershop_id"]},
             {"_id": 0}
