@@ -3504,14 +3504,15 @@ async def super_admin_activity_logs(admin: dict = Depends(verify_super_admin), l
 
 @api_router.get("/super-admin/whatsapp-report")
 async def super_admin_whatsapp_report(admin: dict = Depends(verify_super_admin)):
-    """Get detailed WhatsApp (Respond.io) integration report"""
+    """Get detailed WhatsApp (Twilio) integration report"""
     
     return {
         "integration_status": {
-            "configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID),
-            "api_token_set": bool(RESPONDIO_API_TOKEN),
-            "channel_id_set": bool(RESPONDIO_CHANNEL_ID),
-            "provider": "Respond.io"
+            "configured": bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_WHATSAPP_NUMBER),
+            "account_sid_set": bool(TWILIO_ACCOUNT_SID),
+            "auth_token_set": bool(TWILIO_AUTH_TOKEN),
+            "whatsapp_number_set": bool(TWILIO_WHATSAPP_NUMBER),
+            "provider": "Twilio"
         },
         "message_types": [
             {
