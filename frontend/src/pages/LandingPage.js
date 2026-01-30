@@ -548,77 +548,101 @@ export default function LandingPage() {
       {/* Pricing */}
       <section className="py-20 bg-card/30 border-y border-border" data-testid="pricing-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="font-heading text-4xl font-bold text-center uppercase mb-4">
-            Planos e Preços
-          </h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Escolha o plano ideal para o tamanho do seu negócio
-          </p>
-
+          <div className="text-center mb-12">
+            <h2 className="font-heading text-4xl font-bold uppercase mb-4">
+              Planos e Preços
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              Escolha o plano ideal para sua barbearia
+            </p>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Plano Comum */}
-            <Card className="border-border hover:border-primary/50 transition-all">
-              <CardContent className="p-8">
-                <h3 className="font-heading text-xl font-bold uppercase mb-2">Plano Comum</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-bold">R$ 49,90</span>
-                  <span className="text-muted-foreground">/mês</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    'Agendamentos ilimitados',
-                    'Página personalizada',
-                    'Múltiplos profissionais',
-                    'Notificações WhatsApp',
-                    'Suporte por email'
-                  ].map((item, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-primary" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link to="/cadastro">
-                  <Button variant="outline" className="w-full">Começar Agora</Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-border bg-card p-8 relative hover:border-primary/50 transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <Scissors className="w-6 h-6 text-primary" />
+                <h3 className="font-heading font-bold text-2xl uppercase">Plano Comum</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Para barbearias que querem sair do WhatsApp e organizar tudo
+              </p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">R$ 49,90</span>
+                <span className="text-muted-foreground">/mês</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Criação automática da barbearia',
+                  'Agendamentos online ilimitados',
+                  'Agenda digital organizada',
+                  'Cadastro de serviços',
+                  'Cadastro de profissionais',
+                  'Configuração de horários',
+                  'Link público para clientes',
+                  'Confirmação automática WhatsApp',
+                  'Lembrete 30 min antes',
+                  'Acesso pelo celular ou PC'
+                ].map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/cadastro">
+                <Button className="w-full btn-press" variant="outline">
+                  Começar Agora
+                </Button>
+              </Link>
+            </div>
 
             {/* Plano Premium */}
-            <Card className="border-primary bg-primary/5 relative overflow-hidden">
-              <div className="absolute top-4 right-4">
-                <span className="px-3 py-1 rounded-full bg-primary text-xs font-bold uppercase">
+            <div className="rounded-2xl border-2 border-primary bg-gradient-to-b from-primary/10 to-transparent p-8 relative hover:shadow-lg hover:shadow-primary/20 transition-all duration-300">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-bold flex items-center gap-1 shadow-lg">
+                  <Star className="w-4 h-4" />
                   Mais Popular
                 </span>
               </div>
-              <CardContent className="p-8">
-                <h3 className="font-heading text-xl font-bold uppercase mb-2 flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-primary" />
-                  Plano Premium
-                </h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-bold text-primary">R$ 99,90</span>
-                  <span className="text-muted-foreground">/mês</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    'Tudo do plano Comum',
-                    'Relatórios de faturamento',
-                    'Clientes VIP com desconto',
-                    'Galeria de trabalhos',
-                    'Suporte prioritário'
-                  ].map((item, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-primary" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link to="/cadastro">
-                  <Button className="w-full">Começar Agora</Button>
-                </Link>
-              </CardContent>
-            </Card>
+              <div className="flex items-center gap-2 mb-4 mt-2">
+                <Zap className="w-6 h-6 text-primary" />
+                <h3 className="font-heading font-bold text-2xl uppercase text-primary">Plano Premium</h3>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Para barbearias que querem gestão, controle e fidelização
+              </p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold text-primary">R$ 99,90</span>
+                <span className="text-muted-foreground">/mês</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                {[
+                  { text: 'Tudo do Plano Comum +', highlight: true },
+                  { text: 'Relatórios de faturamento', highlight: false },
+                  { text: 'Lucro por profissional', highlight: false },
+                  { text: 'Lucro por horário de atendimento', highlight: false },
+                  { text: 'Estatísticas de horários vendidos', highlight: false },
+                  { text: 'Histórico financeiro completo', highlight: false },
+                  { text: 'Gestão avançada de clientes', highlight: false },
+                  { text: 'Clientes VIP com desconto automático', highlight: true },
+                  { text: 'Galeria de trabalhos na página', highlight: false },
+                  { text: 'Personalização completa (cores, fontes)', highlight: false },
+                  { text: 'Suporte prioritário', highlight: false }
+                ].map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className={`w-4 h-4 shrink-0 ${feature.highlight ? 'text-yellow-500' : 'text-primary'}`} />
+                    <span className={feature.highlight ? 'font-semibold text-primary' : ''}>{feature.text}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/cadastro">
+                <Button className="w-full btn-press animate-pulse-glow text-base py-6">
+                  <Crown className="w-5 h-5 mr-2" />
+                  Começar com Premium
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
