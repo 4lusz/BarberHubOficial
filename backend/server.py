@@ -541,42 +541,51 @@ async def normalize_phone_endpoint(phone: str):
     result = normalize_brazilian_phone(phone)
     return result
 
+def get_twilio_client():
+    """Get Twilio client instance"""
+    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+        return TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    return None
+
 async def send_whatsapp_message(phone: str, message: str):
-    """Send WhatsApp message via Respond.io API"""
-    if not RESPONDIO_API_TOKEN or not RESPONDIO_CHANNEL_ID:
-        logger.warning("Respond.io not configured, skipping WhatsApp")
+    """Send WhatsApp message via Twilio API"""
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_NUMBER:
+        logger.warning("Twilio not configured, skipping WhatsApp")
         return None
     
     try:
         formatted_phone = format_phone_for_whatsapp(phone)
         
-        async with httpx.AsyncClient() as http_client:
-            # Send message via Respond.io API
-            contact_response = await http_client.post(
-                f"https://api.respond.io/v2/contact/phone:{formatted_phone}/message",
-                json={
-                    "message": {
-                        "type": "text",
-                        "text": message
-                    },
-                    "channelId": int(RESPONDIO_CHANNEL_ID)
-                },
-                headers={
-                    "Authorization": f"Bearer {RESPONDIO_API_TOKEN}",
-                    "Content-Type": "application/json"
-                },
-                timeout=30
-            )
-            
-            if contact_response.status_code in [200, 201]:
-                result = contact_response.json()
-                logger.info(f"WhatsApp sent via Respond.io to {phone}")
-                return result.get('id', 'sent')
-            else:
-                logger.error(f"Respond.io error: {contact_response.status_code} - {contact_response.text}")
+        # Run Twilio in thread pool to avoid blocking
+        def send_message():
+            client = get_twilio_client()
+            if not client:
                 return None
+            
+            # Format numbers for WhatsApp
+            from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
+            to_whatsapp = f"whatsapp:+{formatted_phone}"
+            
+            msg = client.messages.create(
+                body=message,
+                from_=from_whatsapp,
+                to=to_whatsapp
+            )
+            return msg.sid
+        
+        # Execute in thread pool
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, send_message)
+        
+        if result:
+            logger.info(f"WhatsApp sent via Twilio to {phone}, SID: {result}")
+            return result
+        else:
+            logger.error("Twilio client not available")
+            return None
+            
     except Exception as e:
-        logger.error(f"Respond.io failed: {str(e)}")
+        logger.error(f"Twilio failed: {str(e)}")
         return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
