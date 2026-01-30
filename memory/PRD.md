@@ -46,12 +46,13 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Alertas de falha no pagamento via WhatsApp
 - [x] Lembretes de renovação 3 dias antes
 
-### Notificações WhatsApp - Respond.io
+### Notificações WhatsApp - Twilio
 - [x] Confirmação automática de agendamento
 - [x] Lembretes 30 min antes
 - [x] Notificações de renovação/falha de pagamento
 - [x] Localização (Google Maps) incluída
 - [x] **Padronização de números para formato brasileiro E.164 (+55DDNNNNNNNNN)**
+- [x] **Integração Twilio WhatsApp Business API**
 
 ### Relatórios (Premium)
 - [x] Relatório diário/semanal
