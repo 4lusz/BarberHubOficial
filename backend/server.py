@@ -3286,10 +3286,11 @@ async def super_admin_dashboard(admin: dict = Depends(verify_super_admin)):
                 "configured": bool(MERCADOPAGO_ACCESS_TOKEN),
                 "mode": "production" if MERCADOPAGO_ACCESS_TOKEN else "not_configured"
             },
-            "whatsapp_respondio": {
-                "configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID),
-                "token_set": bool(RESPONDIO_API_TOKEN),
-                "channel_set": bool(RESPONDIO_CHANNEL_ID)
+            "whatsapp_twilio": {
+                "configured": bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_WHATSAPP_NUMBER),
+                "account_sid_set": bool(TWILIO_ACCOUNT_SID),
+                "auth_token_set": bool(TWILIO_AUTH_TOKEN),
+                "whatsapp_number_set": bool(TWILIO_WHATSAPP_NUMBER)
             },
             "email_resend": {
                 "configured": bool(resend.api_key)
