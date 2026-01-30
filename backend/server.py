@@ -808,7 +808,7 @@ async def get_scheduler_status():
     return {
         "running": scheduler.running,
         "jobs": jobs,
-        "respondio_configured": bool(RESPONDIO_API_TOKEN and RESPONDIO_CHANNEL_ID),
+        "twilio_configured": bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_WHATSAPP_NUMBER),
         "mercadopago_configured": bool(MERCADOPAGO_ACCESS_TOKEN)
     }
 
