@@ -3664,7 +3664,7 @@ Obrigado por usar o BarberHub! 💈"""
             "phone_format": "E.164 sem o + (ex: 5564999766685)"
         },
         "notes": [
-            "As mensagens são enviadas apenas se RESPONDIO_API_TOKEN e RESPONDIO_CHANNEL_ID estiverem configurados",
+            "As mensagens são enviadas apenas se TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_NUMBER estiverem configurados",
             "Os números de telefone são normalizados automaticamente para o formato E.164",
             "Em caso de falha no envio, o erro é logado mas não interrompe o fluxo",
             "O sistema funciona mesmo sem WhatsApp (as mensagens simplesmente não são enviadas)"
