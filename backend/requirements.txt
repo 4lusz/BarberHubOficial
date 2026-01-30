@@ -34,3 +34,4 @@ charset-normalizer==3.4.1
 idna==3.10
 typing_extensions==4.13.2
 mercadopago==2.3.0
+twilio==9.10.0
