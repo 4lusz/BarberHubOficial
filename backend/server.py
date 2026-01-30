@@ -53,6 +53,10 @@ TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', '')
 
+# Respond.io Config (Legacy - keeping for backward compatibility)
+RESPONDIO_API_TOKEN = os.environ.get('RESPONDIO_API_TOKEN', '')
+RESPONDIO_CHANNEL_ID = os.environ.get('RESPONDIO_CHANNEL_ID', '')
+
 # Super Admin Config
 SUPER_ADMIN_PASSWORD = os.environ.get('SUPER_ADMIN_PASSWORD', 'alunyx110205')
 
