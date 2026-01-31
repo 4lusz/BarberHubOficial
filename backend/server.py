@@ -765,6 +765,16 @@ async def check_expired_subscriptions():
 async def root():
     return {"message": "BarberHub API", "status": "ok"}
 
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes/deployment probes"""
+    try:
+        # Quick DB ping to verify connection
+        await db.command("ping")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
 
 # ==================== BACKGROUND TASKS ====================
 
