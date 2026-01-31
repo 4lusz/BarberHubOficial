@@ -32,9 +32,23 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+
+# Extract database name from MONGO_URL or use DB_NAME env var
+# Emergent provides MongoDB Atlas with the database name in the URL
+def get_database_name():
+    db_name = os.environ.get('DB_NAME', '')
+    if db_name:
+        return db_name
+    # Try to extract from MONGO_URL (format: mongodb+srv://.../<database>?...)
+    from urllib.parse import urlparse
+    parsed = urlparse(mongo_url)
+    if parsed.path and parsed.path != '/':
+        return parsed.path.strip('/')
+    return 'barberhub'  # Default fallback
+
+db = client[get_database_name()]
 
 # JWT Config
 JWT_SECRET = os.environ.get('JWT_SECRET', 'barberhub-secret-key-change-in-production')
