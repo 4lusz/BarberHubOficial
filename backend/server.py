@@ -3795,10 +3795,23 @@ app.include_router(api_router)
 # Mount uploads directory for serving static files
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
+# CORS configuration - when using credentials, cannot use wildcard origins
+cors_origins_env = os.environ.get('CORS_ORIGINS', '')
+if cors_origins_env and cors_origins_env != '*':
+    allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
+else:
+    # Default production origins - CORS with credentials requires explicit origins
+    allowed_origins = [
+        "https://barberhubpro.com.br",
+        "https://www.barberhubpro.com.br",
+        "https://barberhub-25.preview.emergentagent.com",
+        "http://localhost:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
