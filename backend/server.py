@@ -2115,7 +2115,15 @@ async def handle_recurring_payment_notification(authorized_payment_id: str):
                         user = await db.users.find_one({"user_id": subscription["user_id"]}, {"_id": 0})
                         if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
                             plan = SUBSCRIPTION_PLANS.get(subscription["plan_id"])
-                            message = f"""✅ *Pagamento Confirmado*
+                            
+                            # Use template if configured
+                            if TWILIO_TEMPLATE_RENEWAL:
+                                await send_whatsapp_template(user["phone"], TWILIO_TEMPLATE_RENEWAL, {
+                                    "1": plan['name'],
+                                    "2": f"{plan['price']:.2f}"
+                                })
+                            else:
+                                message = f"""✅ *Pagamento Confirmado*
 
 Sua assinatura do BarberHub ({plan['name']}) foi renovada automaticamente.
 
@@ -2123,7 +2131,7 @@ Sua assinatura do BarberHub ({plan['name']}) foi renovada automaticamente.
 📅 Próxima cobrança em 30 dias
 
 Obrigado por confiar no BarberHub! 💈"""
-                            await send_whatsapp_message(user["phone"], message)
+                                await send_whatsapp_message(user["phone"], message)
                 
                 elif status == "rejected":
                     # Recurring payment failed - send alert
@@ -2136,14 +2144,21 @@ Obrigado por confiar no BarberHub! 💈"""
                         user = await db.users.find_one({"user_id": subscription["user_id"]}, {"_id": 0})
                         if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
                             plan = SUBSCRIPTION_PLANS.get(subscription["plan_id"])
-                            message = f"""⚠️ *Problema no Pagamento*
+                            
+                            # Use template if configured
+                            if TWILIO_TEMPLATE_PAYMENT_FAILED:
+                                await send_whatsapp_template(user["phone"], TWILIO_TEMPLATE_PAYMENT_FAILED, {
+                                    "1": plan['name']
+                                })
+                            else:
+                                message = f"""⚠️ *Problema no Pagamento*
 
 Não foi possível processar a renovação automática da sua assinatura do BarberHub ({plan['name']}).
 
 Por favor, acesse sua conta e atualize seus dados de pagamento para evitar a suspensão do serviço.
 
 Precisa de ajuda? Entre em contato conosco."""
-                            await send_whatsapp_message(user["phone"], message)
+                                await send_whatsapp_message(user["phone"], message)
                             
     except Exception as e:
         logger.error(f"Recurring payment notification error: {str(e)}")
