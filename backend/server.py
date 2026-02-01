@@ -2863,7 +2863,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
 async def update_appointment(
     appointment_id: str,
     data: AppointmentUpdate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_active_subscription)
 ):
     apt = await db.appointments.find_one({"appointment_id": appointment_id}, {"_id": 0})
     if not apt:
