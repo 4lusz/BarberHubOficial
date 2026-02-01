@@ -1083,6 +1083,29 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
                 "expires_at": expires_at.isoformat()
             }
     
+    # Cancel any existing pending subscriptions in MP before creating new one
+    old_subscription = await db.subscriptions.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if old_subscription and old_subscription.get("mp_preapproval_id") and MERCADOPAGO_ACCESS_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client_http:
+                await client_http.put(
+                    f"https://api.mercadopago.com/preapproval/{old_subscription['mp_preapproval_id']}",
+                    json={"status": "cancelled"},
+                    headers={
+                        "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                        "Content-Type": "application/json"
+                    }
+                )
+            logger.info(f"Cancelled old MP subscription before creating new")
+        except Exception as e:
+            logger.warning(f"Could not cancel old MP subscription: {str(e)}")
+    
+    # Delete old subscription records to start fresh
+    await db.subscriptions.delete_many({"user_id": current_user["user_id"]})
+    
     # Create payment preference with Mercado Pago for new subscriptions or pending ones
     if not MERCADOPAGO_ACCESS_TOKEN:
         # Demo mode - simulate payment success
