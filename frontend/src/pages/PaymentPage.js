@@ -26,9 +26,10 @@ const plans = {
 export default function PaymentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, checkAuth } = useAuth();
+  const { user, barbershop, checkAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [hasBarbershop, setHasBarbershop] = useState(false);
   const [barbershopData, setBarbershopData] = useState({
     name: '',
     address: '',
@@ -50,6 +51,20 @@ export default function PaymentPage() {
       navigate('/escolher-plano');
     }
   }, [planId, plan, navigate]);
+
+  // Load existing barbershop data if user has one with pending/cancelled status
+  useEffect(() => {
+    if (barbershop && barbershop.plan_status !== 'active') {
+      setHasBarbershop(true);
+      setBarbershopData({
+        name: barbershop.name || '',
+        address: barbershop.address || '',
+        phone: barbershop.phone || '',
+        latitude: barbershop.latitude || null,
+        longitude: barbershop.longitude || null,
+      });
+    }
+  }, [barbershop]);
 
   useEffect(() => {
     if (user) {
