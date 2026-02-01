@@ -364,11 +364,6 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link to="/b/demo-premium">
-                <Button size="lg" variant="outline" className="btn-press text-lg px-8" data-testid="hero-demo-button">
-                  Ver Demonstração
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
