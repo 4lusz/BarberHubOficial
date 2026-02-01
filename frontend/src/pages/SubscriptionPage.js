@@ -48,14 +48,14 @@ export default function SubscriptionPage() {
   const handleCancelSubscription = async () => {
     setCancelling(true);
     try {
-      await api.post('/subscription/cancel');
-      toast.success('Assinatura cancelada.');
+      const response = await api.post('/subscription/cancel');
       
       // Refresh barbershop data
       const barbershopRes = await api.get('/barbershops/me');
       updateBarbershop(barbershopRes.data);
       
       toast.success(response.data.message || 'Assinatura cancelada. Você terá acesso até o fim do período pago.');
+      setShowCancelConfirm(false);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao cancelar assinatura');
     } finally {
