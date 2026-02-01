@@ -1109,13 +1109,11 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
     
     # Create payment preference with Mercado Pago for new subscriptions or pending ones
     if not MERCADOPAGO_ACCESS_TOKEN:
-        # Demo mode - simulate payment success
-        return {
-            "success": True,
-            "demo_mode": True,
-            "message": "Modo demonstração - configure MERCADOPAGO_ACCESS_TOKEN para pagamentos reais",
-            "plan": plan
-        }
+        # No Mercado Pago configured - cannot process payments
+        raise HTTPException(
+            status_code=503, 
+            detail="Sistema de pagamentos não configurado. Entre em contato com o suporte."
+        )
     
     frontend_url = os.environ.get('FRONTEND_URL', '')
     if not frontend_url:
