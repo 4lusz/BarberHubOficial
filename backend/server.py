@@ -3573,7 +3573,14 @@ async def process_recurring_billing():
                     plan = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"))
                     try:
                         if owner.get("phone"):
-                            message_text = f"""⚠️ *Lembrete de Renovação*
+                            # Use template if configured
+                            if TWILIO_TEMPLATE_RENEWAL_REMINDER:
+                                result = await send_whatsapp_template(owner["phone"], TWILIO_TEMPLATE_RENEWAL_REMINDER, {
+                                    "1": plan['name'],
+                                    "2": f"{plan['price']:.2f}"
+                                })
+                            else:
+                                message_text = f"""⚠️ *Lembrete de Renovação*
 
 Olá! Sua assinatura do BarberHub ({plan['name']}) expira em breve.
 
@@ -3583,7 +3590,7 @@ Para continuar recebendo agendamentos, renove sua assinatura acessando o painel.
 
 Obrigado por usar o BarberHub! 💈"""
                             
-                            result = await send_whatsapp_message(owner["phone"], message_text)
+                                result = await send_whatsapp_message(owner["phone"], message_text)
                             if result:
                                 logger.info(f"Renewal reminder sent to {barbershop['barbershop_id']}: {result}")
                     except Exception as e:
