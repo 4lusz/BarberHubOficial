@@ -156,6 +156,28 @@ export default function SuperAdminPage() {
     }
   };
 
+  const deleteBarbershop = async (barbershopId, barbershopName) => {
+    if (!window.confirm(`⚠️ ATENÇÃO!\n\nVocê está prestes a EXCLUIR PERMANENTEMENTE a barbearia "${barbershopName}".\n\nIsso irá deletar:\n- Todos os serviços\n- Todos os profissionais\n- Todos os agendamentos\n- Todos os clientes VIP\n- A conta do dono\n\nEsta ação NÃO pode ser desfeita!\n\nDigite "EXCLUIR" para confirmar:`)) {
+      return;
+    }
+    
+    const confirmText = window.prompt(`Digite "EXCLUIR" para confirmar a exclusão de "${barbershopName}":`);
+    if (confirmText !== 'EXCLUIR') {
+      toast.error('Exclusão cancelada - texto de confirmação incorreto');
+      return;
+    }
+    
+    try {
+      await api.delete(`/super-admin/barbershops/${barbershopId}`, { headers: getAuthHeaders() });
+      toast.success(`Barbearia "${barbershopName}" excluída com sucesso!`);
+      setSelectedBarbershop(null);
+      loadBarbershops();
+      loadDashboard();
+    } catch (error) {
+      toast.error('Erro ao excluir barbearia: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   // Login Screen
   if (!authenticated) {
     return (
