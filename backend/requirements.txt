@@ -35,3 +35,4 @@ idna==3.10
 typing_extensions==4.13.2
 mercadopago==2.3.0
 twilio==9.10.0
+passlib[bcrypt]==1.7.4
