@@ -1925,7 +1925,10 @@ async def activate_subscription(user_id: str, plan_id: str, payment_id: str = No
             {"$set": {
                 "plan": plan_id,
                 "plan_status": "active",
-                "plan_expires_at": expires_at.isoformat()
+                "plan_expires_at": expires_at.isoformat(),
+                "auto_renew": True,
+                "cancelled_at": None,  # Clear any cancellation
+                "updated_at": datetime.now(timezone.utc).isoformat()
             }}
         )
         
@@ -1942,7 +1945,7 @@ async def activate_subscription(user_id: str, plan_id: str, payment_id: str = No
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
         
-        logger.info(f"Subscription activated for user {user_id}, plan {plan_id}")
+        logger.info(f"Subscription activated for user {user_id}, plan {plan_id}, expires {expires_at.isoformat()}")
 
 
 # ==================== BARBERSHOP ROUTES ====================
