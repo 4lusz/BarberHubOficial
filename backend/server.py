@@ -4306,7 +4306,7 @@ else:
     allowed_origins = [
         "https://barberhubpro.com.br",
         "https://www.barberhubpro.com.br",
-        "https://barberhub-25.preview.emergentagent.com",
+        "https://shavenow-3.preview.emergentagent.com",
         "http://localhost:3000",
     ]
 

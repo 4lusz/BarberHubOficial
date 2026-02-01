@@ -8,46 +8,43 @@ O usuário solicitou a criação de um SaaS de agendamento completo para barbear
 -   **Planos Pagos:** Cadastro obrigatório em um plano (Comum ou Premium) com pagamento via Mercado Pago e cobrança recorrente.
 -   **Painel do Barbeiro (Admin):** Dashboard com agendamentos, gerenciamento de serviços, horários, profissionais, agenda visual, relatórios de faturamento e gerenciamento de Clientes VIP.
 -   **Personalização:** Permitir que o dono da barbearia personalize a página pública com logo, banner, galeria, cores, fontes, texto Sobre Nós e redes sociais.
--   **Localização:** Coletar a localização da barbearia no cadastro e exibi-la ao cliente (com link do Google Maps).
+-   **Localização:** Coletar a localização da barbearia no cadastro e exibi-la ao cliente.
 -   **Notificações via WhatsApp (Twilio):** Enviar confirmações de agendamento e lembretes.
--   **Funcionalidades Adicionais:** Bloqueio manual de horários pelo administrador.
--   **Clientes VIP:** Funcionalidade para o dono da barbearia (plano Premium) marcar clientes como VIP, oferecendo um desconto fixo nos agendamentos.
 -   **Painel Super Admin:** Um painel para o proprietário da plataforma gerenciar todo o sistema.
 
 **User's preferred language**: Português (Brasil)
 
 **what currently exists?**
-Um aplicativo full-stack (React + FastAPI) que está quase pronto para produção, mas atualmente bloqueado por um erro de deploy. O sistema suporta múltiplas barbearias com assinaturas recorrentes via Mercado Pago (produção). A integração de notificações por WhatsApp foi migrada para Twilio (com chaves de produção). A aplicação possui um painel Super Admin, personalização avançada da página pública, um portal para o dono da barbearia gerenciar sua assinatura e páginas de conteúdo (FAQ, Termos, etc.). Foram realizadas várias correções de bugs e otimizações de performance (N+1 queries). O banco de dados foi limpo, deixando apenas uma conta de demonstração () no ambiente de desenvolvimento.
+Um aplicativo full-stack (React + FastAPI) que passou por uma série de correções críticas. Foram resolvidos problemas de deploy com o MongoDB, erros de CORS, bugs de hash de senha e múltiplas vulnerabilidades de segurança que permitiam acesso indevido ao sistema sem pagamento confirmado. O fluxo de pagamento foi refeito para separar PIX (pagamento avulso) de Cartão de Crédito (recorrência) e o backend foi fortalecido para que apenas o webhook do Mercado Pago possa ativar uma assinatura. O frontend foi modificado para usar um sistema de polling (verificação contínua) que aguarda a confirmação do pagamento antes de liberar o acesso ao dashboard.
 
 **Last working item**:
--   **Last item agent was working:** Tentando resolver um erro crítico de deploy. A aplicação falha ao ser implantada no ambiente de produção da Emergent com um erro de autorização do MongoDB (). O agente tentou corrigir isso modificando o código para extrair dinamicamente o nome do banco de dados da variável de ambiente , em vez de usar um nome fixo (). No entanto, os logs de deploy mais recentes do usuário confirmam que o erro persiste.
--   **Status:** BLOCKED
--   **Agent Testing Done:** Y (O agente testou a correção localmente, mas ela falhou no ambiente de produção real).
--   **Which testing method agent to use?** O próximo agente deve focar na depuração do ambiente de produção. Não é um problema que o  possa capturar. O  pode ser usado novamente para analisar os logs, mas o foco principal deve ser a lógica de conexão com o banco de dados no .
+-   **Last item agent was working:** Corrigindo uma falha de segurança CRÍTICA onde o frontend ativava a assinatura e liberava o acesso ao dashboard imediatamente após o início de um pagamento (PIX ou Cartão), sem aguardar a confirmação real do pagamento via webhook. O agente reescreveu as páginas  e  para, em vez de ativar o plano, apenas exibir uma tela de aguardando confirmação e verificar o status do pagamento continuamente (polling) junto ao backend. O acesso só é liberado quando o backend confirma que o webhook já processou o pagamento e ativou o plano.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Frontend testing agent. É crucial testar o fluxo de pagamento de ponta a ponta para PIX e Cartão, garantindo que o usuário NUNCA seja redirecionado para o dashboard antes da confirmação do pagamento. O teste deve validar que o usuário permanece na tela de aguardando até que o status do plano mude para 'active' no backend.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Erro de autorização do MongoDB impede o deploy (P0 - BLOCKER)**
-    -   **Attempted fixes:** O agente modificou  para obter o nome do banco de dados da string de conexão  e removeu a variável  do arquivo . Essa correção se mostrou ineficaz, pois o erro continua ocorrendo no ambiente de produção.
+-   **Issue 1: Corrigir e validar o novo fluxo de pagamento seguro (P0 - BLOCKER)**
+    -   **Attempted fixes:** O agente reescreveu  e  para usar um mecanismo de polling seguro, que espera a confirmação do backend (que por sua vez espera o webhook) antes de redirecionar para o dashboard.
     -   **Next debug checklist:**
-        1.  Analisar os logs de deploy mais recentes (mensagem #374) para confirmar que o erro  ainda é o problema.
-        2.  Revisar a lógica de conexão com o banco de dados em . A tentativa anterior de usar  pode estar incorreta. Investigar uma abordagem mais robusta, como , para extrair o nome do banco do path da URL.
-        3.  Executar uma busca global () por barberhub_production no diretório  para garantir que não haja outras referências hardcoded ao nome do banco de dados.
-        4.  Corrigir o erro  que aparece nos logs. O endpoint de health check provavelmente está em .
-    -   **Why fix this issue and what will be achieved with the fix?** Este é um bloqueador crítico. A aplicação não pode ser implantada ou funcionar em produção até que esse problema de conexão com o banco de dados seja resolvido.
+        1.  Revisar o código em  e  para garantir que a lógica de polling está correta e segura.
+        2.  Corrigir quaisquer erros de lint, como o que foi ignorado em , pois podem indicar problemas lógicos.
+        3.  Realizar um teste completo do fluxo: criar conta > escolher plano > iniciar pagamento (PIX e Cartão em testes separados) > verificar que a tela Aguardando confirmação é exibida > simular a confirmação do pagamento (via webhook) > verificar que SÓ ENTÃO o frontend redireciona para o dashboard.
+    -   **Why fix this issue and what will be achieved with the fix?** Esta é a vulnerabilidade mais crítica do sistema, pois permite acesso a um serviço pago sem pagar. A correção garante a integridade financeira e de segurança do negócio.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend. O teste principal será um deploy bem-sucedido.
+    -   **Should Test frontend/backend/both after fix?** Both. O frontend para validar a experiência do usuário e o backend para garantir que os endpoints de status são seguros.
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   Nenhum. Todo o trabalho está bloqueado pelo problema de deploy.
+-   Nenhum.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks (Pós-Deploy):**
-    -   (P0) O usuário precisará testar a aplicação em produção, incluindo o fluxo de agendamento com notificação via WhatsApp e o fluxo de pagamento para criação de uma nova conta.
-    -   (P0) O usuário precisará configurar o Webhook do Mercado Pago no painel do MP para o ambiente de produção: .
-    -   (P0) O usuário precisará verificar a conta do Meta Business com o domínio  para ativar completamente o sender do WhatsApp no Twilio.
+-   **Upcoming Tasks (Pós-correção):**
+    -   (P0) O usuário precisará testar a aplicação em produção, focando no fluxo de criação de conta e pagamento.
+    -   (P0) O usuário precisará configurar o Webhook do Mercado Pago no painel do MP para o ambiente de produção.
+    -   (P0) O usuário precisará verificar a conta do Meta Business para ativar as notificações do WhatsApp.
 -   **Future Tasks:**
     -   (P1) Implementar um programa de fidelidade.
     -   (P1) Aprimorar a página de Relatórios com mais gráficos e métricas.
@@ -55,89 +52,89 @@ Um aplicativo full-stack (React + FastAPI) que está quase pronto para produçã
     -   (P2) Adicionar links de redes sociais ao rodapé.
 
 **Completed work in this session**
--   **Integração do Twilio:** Substituída a integração do Respond.io pelo Twilio para notificações via WhatsApp, com as credenciais de produção do usuário.
--   **Painel Super Admin:** Criado painel protegido por senha () em  para gerenciamento da plataforma.
--   **Redesign da Landing Page:** A página inicial foi completamente redesenhada para incluir uma seção Como Funciona, um destaque para a integração com WhatsApp e uma seção de preços mais atraente.
--   **Conteúdo Adicional:** Criadas as páginas de FAQ, Termos de Uso e Política de Privacidade.
--   **Limpeza do Banco de Dados:** Criado e executado um script para limpar o banco de dados, mantendo apenas a conta de demonstração (no ambiente de dev).
--   **Correções de Deploy:** Resolvidos problemas de query N+1, adicionadas dependências ausentes e atualizado o título da aplicação no .
+-   **Correção Crítica de Deploy:** Resolvido erro de autorização do MongoDB () no ambiente de produção.
+-   **Correção de CORS:** Ajustada a configuração do middleware CORS no backend para permitir credenciais e tratar requisições preflight corretamente.
+-   **Correção de Autenticação:** Migrado o sistema de hash de senhas para  para corrigir um bug que impedia o login.
+-   **Remoção de Vulnerabilidade de Ativação:** Removido um endpoint de modo demo () e lógicas no frontend que permitiam ativar planos sem pagamento.
+-   **Fortalecimento do Backend:** Implementada uma dependência () que protege todas as rotas sensíveis, garantindo que apenas usuários com assinatura ativa possam executar ações.
+-   **Melhora no Fluxo de Pagamento:** O fluxo de PIX foi separado para gerar um QR Code diretamente, sem a tela intermediária do Mercado Pago.
+-   **Correção do Fluxo de Cancelamento:** Ajustado para que, ao cancelar, o usuário mantenha o acesso até a data de expiração do plano, em vez de ser bloqueado imediatamente.
+-   **Ajustes de UX e Branding:** Removido o branding da Emergent, o botão de demonstração e adicionados avisos sobre os tipos de pagamento (PIX vs. Cartão).
 
 **Earlier issues found/mentioned but not fixed**
--   O arquivo monolítico  continua sendo um débito técnico significativo. A refatoração futura para uma arquitetura mais modular (routes, models, services) é recomendada.
+-   O arquivo  é um monolito e representa um débito técnico. Uma futura refatoração para uma arquitetura modular (routes, models, services) é altamente recomendada para manutenibilidade.
 
 **Known issue recurrence from previous fork**
--   N/A
+-   **Ativação Indevida de Assinatura:** O problema de conceder acesso a recursos pagos antes da confirmação do pagamento é um tema recorrente. Várias brechas foram fechadas, mas a recorrência indica uma fragilidade arquitetônica que exige atenção contínua.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI, Python, MongoDB, APScheduler
+-   **Backend:** FastAPI, Python, MongoDB
 -   **Frontend:** React, Tailwind CSS
 -   **Autenticação:** JWT (JSON Web Tokens)
--   **Integrações:** Mercado Pago (API de Assinaturas/Preapproval), Twilio (WhatsApp)
+-   **Integrações:** Mercado Pago, Twilio
 
 **key DB schema**
--   Nenhuma alteração no esquema.
+-   **payments:** Nova coleção para rastrear pagamentos avulsos (PIX).
+-   **barbershops:** Adicionados campos  (datetime) e  (bool).
 
 **changes in tech stack**
--   Migração da API de WhatsApp de **Respond.io** para **Twilio**.
+-   Adicionado  para hashing de senha no backend.
 
 **All files of reference**
--   : Arquivo central modificado para a integração com Twilio e para a tentativa de correção do problema com o nome do banco de dados.
--   : Atualizado com as chaves do Twilio e remoção do .
--   : Adicionada a dependência .
--   : Arquivo completamente reescrito com o novo design.
--   : Título da página atualizado.
--   , , , : Novas páginas criadas.
+-   : Arquivo principal do backend, massivamente modificado para correções de segurança, pagamentos e lógica de assinatura.
+-   : Contém a lógica de verificação de status do plano, crucial para a segurança do frontend.
+-   : Página recém-criada e reescrita para exibir o QR Code e aguardar a confirmação do pagamento de forma segura.
+-   : Página recém-criada e reescrita para aguardar a confirmação de pagamentos (especialmente de cartão) de forma segura.
+-   : Contém as rotas protegidas () que garantem que apenas usuários com plano ativo acessem o dashboard.
+-   : Modificada para refletir corretamente o status de assinaturas canceladas.
 
 **Areas that need refactoring**:
--   O monolito  deve ser dividido em módulos para melhor manutenibilidade.
+-    precisa urgentemente ser dividido em módulos.
 
 **key api endpoints**
--    (NOVO)
--    (NOVO)
--    (NOVO)
+-   **Novos:**
+    -   : Health check.
+    -   : Verifica o status de um pagamento PIX (usado para polling).
+-   **Modificados:**
+    -   : Lógica dividida para PIX e Cartão.
+    -   : Lógica corrigida para não revogar o acesso imediatamente.
+    -   : Agora é a única fonte da verdade para ativar assinaturas.
+    -   A maioria dos endpoints de barbearia (serviços, agendamentos, etc.) agora são protegidos e exigem uma assinatura ativa.
+-   **Removidos:**
+    -   : Removido por ser uma falha de segurança crítica.
 
 **Critical Info for New Agent**
--   **O DEPLOY ESTÁ BLOQUEADO.** Sua tarefa prioritária é resolver o erro . A correção anterior foi insuficiente. Investigue os logs de deploy (mensagem #374) e a lógica de conexão com o banco em . O código não deve, em hipótese alguma, usar um nome de banco de dados fixo; ele deve usar o que for fornecido pela variável de ambiente  no ambiente de produção da Emergent.
--   O ambiente de produção da Emergent usa um banco de dados Atlas gerenciado, que é diferente do MongoDB local. O nome do banco de dados de produção é injetado através da  e não pode ser .
--   O usuário já configurou a variável  no painel da Emergent para , o que resolveu um problema de CORS anterior.
+-   **PRIORIDADE MÁXIMA:** A tarefa atual é finalizar e validar a correção de uma vulnerabilidade de segurança crítica que permite acesso pago sem pagamento. O plano só pode ser ativado pelo webhook do Mercado Pago. O frontend deve apenas aguardar essa confirmação.
+-   **Dupla Camada de Segurança:** O sistema agora possui uma camada de segurança no frontend ( e  em ) e uma camada mais forte no backend (dependência ). Ambas devem ser mantidas.
+-   **Ambientes Separados:** Lembre ao usuário que o banco de dados que você manipula é de desenvolvimento (). O banco de produção dele está no Atlas e não é acessado por você.
+-   **Recorrência do Bug:** A falha de acesso sem pagamento já apareceu de várias formas. Seja extremamente cético e teste todos os cenários de borda relacionados ao fluxo de pagamento e criação de conta.
 
 **documents and test reports created in this job**
--    (Atualizado)
--   
--   
+-   Nenhum documento novo foi criado.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  : Usuário pede uma correção para o erro de autorização do MongoDB que persiste durante o deploy. **(PENDENTE)**
-2.  : O agente anterior deu uma resposta incorreta, afirmando que era um problema de configuração do usuário, quando os logs mostram um erro de código/ambiente.
-3.  : O usuário fornece novos logs de deploy que mostram que o erro  ainda ocorre.
-4.  : O agente remove o  do  e atualiza  para tentar corrigir o problema.
-5.  : O agente analisa os logs e identifica corretamente o problema do nome do banco de dados hardcoded.
-6.  : O usuário informa que, após corrigir a  e fazer o redeploy, a página da barbearia demo continua dando não encontrada.
-7.  : O agente identifica um erro de CORS e instrui o usuário a atualizar a variável  no painel da Emergent.
-8.  : O usuário mostra uma imagem com um erro de CORS ao tentar fazer login no site em produção.
-9.  : O usuário mostra uma imagem com o erro barbearia nao encontrada no site em produção.
-10. : O usuário concorda com o plano de testes e está pronto para prosseguir.
+1.  **Pendente:** O usuário reportou que, mesmo com as correções anteriores, o fluxo de pagamento PIX ainda está inseguro, ativando o plano sem confirmação real do webhook. Ele solicitou que a ativação seja feita EXCLUSIVAMENTE pelo webhook e que o frontend apenas aguarde em uma tela de pagamento pendente.
 
 **Project Health Check:**
--   **Broken:** O deployment está quebrado devido ao erro de autorização do MongoDB. A aplicação não pode ser colocada em produção.
--   **Mocked:** A integração com Twilio está codificada, mas aguarda um deploy bem-sucedido e a verificação da conta Meta pelo usuário para ser testada funcionalmente.
+-   **Broken:** O fluxo de pagamento é funcionalmente inseguro e concede acesso indevido, tornando o aplicativo inviável para produção até que seja corrigido.
+-   **Mocked:** N/A.
 
 **3rd Party Integrations**
--   **Mercado Pago (Payments):** Configurado com chaves de produção. Requer configuração de webhook pós-deploy.
--   **Twilio (WhatsApp):** Configurado com chaves de produção. Requer verificação da conta do Meta pós-deploy.
+-   **Mercado Pago (Payments):** Usado para assinaturas (cartão) e pagamentos avulsos (PIX).
+-   **Twilio (WhatsApp):** Usado para notificações.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES
--   **Troubleshoot agent used after agent stuck in loop:** YES ()
--   **Test files created:** [, ]
--   **Known regressions:** A aplicação não pode ser implantada, o que é uma regressão crítica.
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** []
+-   **Known regressions:** A vulnerabilidade de segurança que permite acesso a recursos pagos sem confirmação de pagamento é uma regressão crítica e recorrente.
 
 **Credentials to test flow:**
--   **Super Admin:** Acessar via , senha: 
--   **Conta Demo:**  | . Esta conta precisa ser recriada no ambiente de produção após um deploy bem-sucedido.
+-   **Conta Demo (desenvolvimento):**  | 
 
 **What agent forgot to execute**
--   O agente anterior falhou em corrigir de forma eficaz o erro de autorização do MongoDB. A solução proposta foi inadequada e não resolveu o bloqueio de deploy. Além disso, o agente diagnosticou erroneamente o problema como sendo do lado do usuário no final, apesar dos logs apontarem para um erro na aplicação.</analysis>
+-   O agente anterior não corrigiu um erro de lint no arquivo , optando por ignorá-lo. Isso pode mascarar um problema real.
+-   Não foi realizado um teste completo do novo fluxo de pagamento baseado em polling após as últimas modificações, que eram a resposta direta ao último pedido crítico do usuário.</analysis>
