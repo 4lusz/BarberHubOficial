@@ -691,10 +691,12 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
     
     try:
         formatted_phone = format_phone_for_whatsapp(phone)
+        logger.info(f"Sending WhatsApp template to {formatted_phone}, content_sid={content_sid[:20]}...")
         
         def send_template():
             client = get_twilio_client()
             if not client:
+                logger.error("Twilio client is None")
                 return None
             
             to_whatsapp = f"whatsapp:+{formatted_phone}"
@@ -702,6 +704,8 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
             # Convert variables dict to JSON string
             import json
             variables_json = json.dumps(content_variables)
+            
+            logger.info(f"Twilio call: to={to_whatsapp}, variables={variables_json}")
             
             msg = client.messages.create(
                 messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
@@ -715,14 +719,14 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
         result = await loop.run_in_executor(None, send_template)
         
         if result:
-            logger.info(f"WhatsApp template sent to {phone}, SID: {result}")
+            logger.info(f"WhatsApp template sent successfully to {phone}, SID: {result}")
             return result
         else:
-            logger.error("Twilio client not available")
+            logger.error("Twilio returned None - client not available")
             return None
             
     except Exception as e:
-        logger.error(f"Twilio template failed: {str(e)}")
+        logger.error(f"Twilio template failed for {phone}: {str(e)}")
         return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
