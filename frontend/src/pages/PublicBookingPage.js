@@ -760,8 +760,12 @@ export default function PublicBookingPage() {
                         key={slot.time}
                         variant={booking.time === slot.time ? "default" : "outline"}
                         onClick={() => handleTimeSelect(slot.time)}
-                        className={`min-w-0 px-2 ${booking.time === slot.time ? 'text-black' : 'border-gray-700 text-white hover:bg-white/10'}`}
-                        style={booking.time === slot.time ? { backgroundColor: primaryColor } : {}}
+                        className="min-w-0 px-2"
+                        style={
+                          booking.time === slot.time 
+                            ? { backgroundColor: primaryColor, color: '#000' } 
+                            : { backgroundColor: 'rgba(0,0,0,0.3)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }
+                        }
                         data-testid={`time-${slot.time}`}
                       >
                         {slot.time}
