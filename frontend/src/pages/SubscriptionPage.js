@@ -55,8 +55,7 @@ export default function SubscriptionPage() {
       const barbershopRes = await api.get('/barbershops/me');
       updateBarbershop(barbershopRes.data);
       
-      // Redirect to plans page
-      navigate('/escolher-plano', { replace: true });
+      toast.success(response.data.message || 'Assinatura cancelada. Você terá acesso até o fim do período pago.');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao cancelar assinatura');
     } finally {
@@ -83,6 +82,7 @@ export default function SubscriptionPage() {
 
   const currentPlan = PLANS[barbershop?.plan] || PLANS.comum;
   const isPremium = barbershop?.plan === 'premium';
+  const isCancelled = barbershop?.cancelled_at && !barbershop?.auto_renew;
 
   if (loading || !barbershop) {
     return (
