@@ -128,6 +128,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/pagamento/pix"
+        element={
+          <PaymentFlowRoute>
+            <PixPaymentPage />
+          </PaymentFlowRoute>
+        }
+      />
+      <Route
         path="/pagamento/sucesso"
         element={
           <ProtectedRoute>
