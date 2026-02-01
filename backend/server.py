@@ -1655,6 +1655,18 @@ async def handle_payment_notification(payment_id: str):
                 payment_data = resp.json()
                 external_ref = payment_data.get("external_reference", "")
                 status = payment_data.get("status")
+                payment_method = payment_data.get("payment_method_id", "")
+                
+                logger.info(f"Payment {payment_id} status: {status}, method: {payment_method}")
+                
+                # Update payment record in database
+                await db.payments.update_one(
+                    {"mp_payment_id": str(payment_id)},
+                    {"$set": {
+                        "status": status,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
                 
                 if status == "approved" and external_ref:
                     parts = external_ref.split("_")
@@ -1662,6 +1674,23 @@ async def handle_payment_notification(payment_id: str):
                         user_id = parts[0]
                         plan_id = parts[1]
                         await activate_subscription(user_id, plan_id, payment_id, payment_data.get("transaction_amount"))
+                        
+                        # Send WhatsApp confirmation for PIX payment
+                        if payment_method == "pix":
+                            user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+                            if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+                                plan_info = SUBSCRIPTION_PLANS.get(plan_id, {})
+                                message = f"""✅ *Pagamento PIX Confirmado!*
+
+Seu pagamento de R$ {payment_data.get('transaction_amount', 0):.2f} foi confirmado.
+
+Plano: {plan_info.get('name', plan_id)}
+Sua assinatura está ativa!
+
+Acesse seu dashboard em barberhubpro.com.br
+
+Obrigado por escolher o BarberHub! 💈"""
+                                await send_whatsapp_message(user["phone"], message)
                         
                 elif status in ["rejected", "cancelled"]:
                     # Payment failed
