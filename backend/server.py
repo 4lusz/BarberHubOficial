@@ -782,6 +782,37 @@ async def send_whatsapp_booking_confirmation(phone: str, client_name: str, barbe
     except:
         formatted_date = date
     
+    maps_link = ""
+    if latitude and longitude:
+        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+    
+    # Use VIP template or regular template based on discount
+    if discount_percentage > 0 and TWILIO_TEMPLATE_BOOKING_VIP:
+        return await send_whatsapp_template(phone, TWILIO_TEMPLATE_BOOKING_VIP, {
+            "1": client_name,
+            "2": barbershop_name,
+            "3": service_name,
+            "4": formatted_date,
+            "5": time,
+            "6": f"{original_price:.2f}",
+            "7": str(int(discount_percentage)),
+            "8": f"{final_price:.2f}",
+            "9": address or "Não informado",
+            "10": maps_link or "Não disponível"
+        })
+    elif TWILIO_TEMPLATE_BOOKING_CONFIRMATION:
+        return await send_whatsapp_template(phone, TWILIO_TEMPLATE_BOOKING_CONFIRMATION, {
+            "1": client_name,
+            "2": barbershop_name,
+            "3": service_name,
+            "4": formatted_date,
+            "5": time,
+            "6": f"{final_price:.2f}",
+            "7": address or "Não informado",
+            "8": maps_link or "Não disponível"
+        })
+    
+    # Fallback to body message (for sandbox/testing)
     message_body = f"""✅ *Agendamento Confirmado!*
 
 Olá {client_name}! Seu horário na *{barbershop_name}* foi confirmado.
@@ -804,8 +835,7 @@ Olá {client_name}! Seu horário na *{barbershop_name}* foi confirmado.
     if address:
         message_body += f"\n\n📌 Endereço: {address}"
     
-    if latitude and longitude:
-        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+    if maps_link:
         message_body += f"\n🗺️ Ver no mapa: {maps_link}"
     
     message_body += "\n\n📲 Você receberá um lembrete 30 minutos antes do horário.\n\nAté logo! 💈"
