@@ -30,9 +30,9 @@ import FAQPage from './pages/FAQPage';
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
 
-// Protected Route Component
+// Protected Route Component - Only allows access if subscription is ACTIVE
 const ProtectedRoute = ({ children, requireBarbershop = false }) => {
-  const { isAuthenticated, loading, user, barbershop, needsPayment } = useAuth();
+  const { isAuthenticated, loading, user, barbershop } = useAuth();
 
   if (loading) {
     return (
@@ -46,15 +46,23 @@ const ProtectedRoute = ({ children, requireBarbershop = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // If user is a barber without barbershop, redirect to plan selection
-  if (requireBarbershop && user?.role === 'barber' && !barbershop) {
-    return <Navigate to="/escolher-plano" replace />;
+  // If user is a barber, check subscription status
+  if (requireBarbershop && user?.role === 'barber') {
+    // No barbershop at all - go to plans
+    if (!barbershop) {
+      return <Navigate to="/escolher-plano" replace />;
+    }
+    
+    // Barbershop exists but subscription is not active - go to plans
+    if (barbershop.plan_status !== 'active') {
+      return <Navigate to="/escolher-plano" replace />;
+    }
   }
 
   return children;
 };
 
-// Payment Flow Route - Only for users who need to pay
+// Payment Flow Route - For users who need to pay/complete payment
 const PaymentFlowRoute = ({ children }) => {
   const { isAuthenticated, loading, user, barbershop } = useAuth();
 
@@ -70,8 +78,8 @@ const PaymentFlowRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // If already has barbershop, go to dashboard
-  if (user?.role === 'barber' && barbershop) {
+  // Only redirect to dashboard if barbershop exists AND subscription is ACTIVE
+  if (user?.role === 'barber' && barbershop && barbershop.plan_status === 'active') {
     return <Navigate to="/dashboard" replace />;
   }
 
