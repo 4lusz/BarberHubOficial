@@ -1338,6 +1338,170 @@ Obrigado por usar o BarberHub! 💈"""
         "message": "Assinatura cancelada. Você terá acesso até o fim do período pago."
     }
 
+@api_router.post("/subscription/cancel-pending")
+async def cancel_pending_subscription(current_user: dict = Depends(get_current_user)):
+    """Cancel a pending subscription that hasn't been paid yet"""
+    if current_user["role"] != "barber":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    if barbershop.get("plan_status") != "pending":
+        raise HTTPException(status_code=400, detail="Apenas assinaturas pendentes podem ser canceladas por este endpoint")
+    
+    # Get and cancel any pending subscription in Mercado Pago
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    
+    if subscription and subscription.get("mp_preapproval_id") and MERCADOPAGO_ACCESS_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client_http:
+                resp = await client_http.put(
+                    f"https://api.mercadopago.com/preapproval/{subscription['mp_preapproval_id']}",
+                    json={"status": "cancelled"},
+                    headers={
+                        "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                        "Content-Type": "application/json"
+                    }
+                )
+                logger.info(f"Cancel pending MP subscription response: {resp.status_code}")
+        except Exception as e:
+            logger.error(f"Error cancelling pending MP subscription: {str(e)}")
+    
+    # Delete the subscription record so user can start fresh
+    await db.subscriptions.delete_many({"user_id": current_user["user_id"]})
+    
+    # Update barbershop status to cancelled
+    await db.barbershops.update_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"$set": {
+            "plan_status": "cancelled",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    logger.info(f"Cancelled pending subscription for user {current_user['user_id']}")
+    
+    return {
+        "success": True,
+        "message": "Assinatura pendente cancelada. Você pode iniciar um novo pagamento quando quiser."
+    }
+
+@api_router.post("/subscription/restart-payment")
+async def restart_payment(plan_id: str = None, current_user: dict = Depends(get_current_user)):
+    """Restart payment process for pending/cancelled/expired subscription"""
+    if current_user["role"] != "barber":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
+    # Only allow restart for non-active subscriptions
+    if barbershop.get("plan_status") == "active":
+        raise HTTPException(status_code=400, detail="Sua assinatura já está ativa")
+    
+    # Cancel any existing pending subscriptions in MP
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    
+    if subscription and subscription.get("mp_preapproval_id") and MERCADOPAGO_ACCESS_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client_http:
+                await client_http.put(
+                    f"https://api.mercadopago.com/preapproval/{subscription['mp_preapproval_id']}",
+                    json={"status": "cancelled"},
+                    headers={
+                        "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                        "Content-Type": "application/json"
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Could not cancel old MP subscription: {str(e)}")
+    
+    # Delete old subscription records
+    await db.subscriptions.delete_many({"user_id": current_user["user_id"]})
+    
+    # Reset barbershop to pending status with selected plan
+    selected_plan = plan_id or barbershop.get("plan", "comum")
+    if selected_plan not in SUBSCRIPTION_PLANS:
+        selected_plan = "comum"
+    
+    await db.barbershops.update_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"$set": {
+            "plan": selected_plan,
+            "plan_status": "pending",
+            "plan_expires_at": None,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    logger.info(f"Reset subscription for user {current_user['user_id']} to plan {selected_plan}")
+    
+    return {
+        "success": True,
+        "message": "Pronto! Você pode iniciar um novo pagamento.",
+        "plan": selected_plan,
+        "redirect_to": f"/pagamento?plano={selected_plan}"
+    }
+
+@api_router.get("/subscription/pending-status")
+async def get_pending_subscription_status(current_user: dict = Depends(get_current_user)):
+    """Get detailed status of pending subscription"""
+    if current_user["role"] != "barber":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    if not current_user.get("barbershop_id"):
+        return {"has_pending": False}
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        return {"has_pending": False}
+    
+    subscription = await db.subscriptions.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    
+    plan_info = SUBSCRIPTION_PLANS.get(barbershop.get("plan", "comum"), SUBSCRIPTION_PLANS["comum"])
+    
+    return {
+        "has_pending": barbershop.get("plan_status") == "pending",
+        "plan_status": barbershop.get("plan_status"),
+        "plan": barbershop.get("plan"),
+        "plan_name": plan_info["name"],
+        "plan_price": plan_info["price"],
+        "subscription_id": subscription.get("mp_preapproval_id") if subscription else None,
+        "created_at": subscription.get("created_at") if subscription else None,
+        "can_cancel": barbershop.get("plan_status") in ["pending"],
+        "can_restart": barbershop.get("plan_status") in ["pending", "cancelled", "expired"]
+    }
+
 @api_router.post("/webhooks/mercadopago")
 async def mercadopago_webhook(request: Request):
     """Handle Mercado Pago payment and subscription notifications"""
