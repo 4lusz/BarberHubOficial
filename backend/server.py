@@ -2518,7 +2518,7 @@ async def delete_time_block(block_id: str, current_user: dict = Depends(require_
 async def get_appointments(
     date: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_active_subscription)
 ):
     if not current_user.get("barbershop_id"):
         return []
