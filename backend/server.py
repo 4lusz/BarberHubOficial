@@ -2127,7 +2127,7 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
 # Subscription activation MUST only happen via webhook from Mercado Pago
 
 @api_router.put("/barbershops")
-async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends(get_current_user)):
+async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2185,7 +2185,7 @@ async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends
 async def upload_barbershop_image(
     upload_type: str,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_active_subscription)
 ):
     """Upload logo, banner or gallery image for barbershop"""
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
@@ -2237,7 +2237,7 @@ async def upload_barbershop_image(
     return {"success": True, "url": image_url, "type": upload_type}
 
 @api_router.delete("/barbershops/gallery")
-async def delete_gallery_image(image_url: str, current_user: dict = Depends(get_current_user)):
+async def delete_gallery_image(image_url: str, current_user: dict = Depends(require_active_subscription)):
     """Remove image from gallery"""
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
