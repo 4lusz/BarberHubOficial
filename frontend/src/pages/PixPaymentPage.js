@@ -20,13 +20,12 @@ export default function PixPaymentPage() {
   const location = useLocation();
   const { checkAuth } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [status, setStatus] = useState('pending');
+  const [status, setStatus] = useState('pending'); // pending, processing, approved
   const [checking, setChecking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
   
   const pixData = location.state?.pixData;
   const plan = location.state?.plan;
-  const planId = location.state?.planId;
 
   // Redirect if no PIX data
   useEffect(() => {
@@ -47,20 +46,27 @@ export default function PixPaymentPage() {
     return () => clearInterval(timer);
   }, [timeLeft, status]);
 
-  // Poll for payment status
+  // Poll for payment status - ONLY checks, NEVER activates
   useEffect(() => {
     if (!pixData?.payment_id || status === 'approved') return;
     
     const pollInterval = setInterval(async () => {
       try {
         const response = await api.get(`/payment/pix-status/${pixData.payment_id}`);
-        if (response.data.status === 'approved') {
+        
+        // ONLY redirect if backend confirms plan_status is 'active'
+        // The backend only returns 'approved' status if plan_status === 'active'
+        if (response.data.status === 'approved' && response.data.redirect_to === '/dashboard') {
           setStatus('approved');
           toast.success('Pagamento confirmado!');
-          await checkAuth();
           clearInterval(pollInterval);
+          // Refresh auth to update barbershop data
+          await checkAuth();
           setTimeout(() => navigate('/dashboard'), 2000);
+        } else if (response.data.status === 'processing') {
+          setStatus('processing');
         }
+        // If status is still 'pending', keep polling
       } catch (error) {
         console.error('Error checking PIX status:', error);
       }
@@ -84,11 +90,16 @@ export default function PixPaymentPage() {
     setChecking(true);
     try {
       const response = await api.get(`/payment/pix-status/${pixData.payment_id}`);
-      if (response.data.status === 'approved') {
+      
+      // ONLY redirect if backend confirms plan_status is 'active'
+      if (response.data.status === 'approved' && response.data.redirect_to === '/dashboard') {
         setStatus('approved');
         toast.success('Pagamento confirmado!');
         await checkAuth();
         setTimeout(() => navigate('/dashboard'), 2000);
+      } else if (response.data.status === 'processing') {
+        setStatus('processing');
+        toast.info('Pagamento detectado! Processando ativação...');
       } else {
         toast.info('Aguardando confirmação do pagamento...');
       }
@@ -109,6 +120,7 @@ export default function PixPaymentPage() {
     return null;
   }
 
+  // Payment confirmed by webhook
   if (status === 'approved') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -159,6 +171,19 @@ export default function PixPaymentPage() {
                 Escaneie o QR Code ou copie o código
               </p>
             </div>
+
+            {/* Processing Status */}
+            {status === 'processing' && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 text-yellow-500 animate-spin" />
+                  <div>
+                    <p className="font-medium text-yellow-500">Processando...</p>
+                    <p className="text-sm text-muted-foreground">Pagamento detectado, ativando sua conta...</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Plan Info */}
             <div className="bg-secondary/50 rounded-lg p-4 mb-6">
@@ -232,7 +257,7 @@ export default function PixPaymentPage() {
               variant="default"
               className="w-full mt-6"
               onClick={handleCheckStatus}
-              disabled={checking}
+              disabled={checking || status === 'processing'}
               data-testid="check-pix-status"
             >
               {checking ? (
@@ -273,7 +298,9 @@ export default function PixPaymentPage() {
 
             {/* Auto-update notice */}
             <p className="text-xs text-center text-muted-foreground mt-6">
-              Esta página atualiza automaticamente quando o pagamento for confirmado
+              Esta página atualiza automaticamente quando o pagamento for confirmado pelo banco.
+              <br />
+              <strong>Não feche esta página.</strong>
             </p>
           </CardContent>
         </Card>
