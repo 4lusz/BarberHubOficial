@@ -1300,34 +1300,24 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
         {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
     )
     
-    # Update barbershop - keep access until expiration but mark as cancelled
+    # Update barbershop - immediately set to cancelled (user loses access now)
     await db.barbershops.update_one(
         {"barbershop_id": current_user["barbershop_id"]},
-        {"$set": {"auto_renew": False}}
+        {"$set": {
+            "plan_status": "cancelled",
+            "auto_renew": False,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
     )
     
     # Send WhatsApp confirmation
     user = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0})
     if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
-        barbershop = await db.barbershops.find_one(
-            {"barbershop_id": current_user["barbershop_id"]},
-            {"_id": 0}
-        )
-        expires_at = barbershop.get("plan_expires_at", "")
-        try:
-            from datetime import datetime as dt
-            exp_date = dt.fromisoformat(expires_at.replace('Z', '+00:00'))
-            exp_formatted = exp_date.strftime("%d/%m/%Y")
-        except:
-            exp_formatted = expires_at
-        
         message = f"""📋 *Cancelamento de Assinatura*
 
 Sua assinatura do BarberHub foi cancelada conforme solicitado.
 
-Você continuará tendo acesso até: *{exp_formatted}*
-
-Caso mude de ideia, você pode reativar sua assinatura a qualquer momento pelo painel.
+Para reativar, basta escolher um novo plano em nosso site.
 
 Obrigado por usar o BarberHub! 💈"""
         
@@ -1335,7 +1325,7 @@ Obrigado por usar o BarberHub! 💈"""
     
     return {
         "success": True,
-        "message": "Assinatura cancelada. Você terá acesso até o fim do período pago."
+        "message": "Assinatura cancelada."
     }
 
 @api_router.post("/subscription/cancel-pending")
