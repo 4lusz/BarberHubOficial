@@ -733,6 +733,22 @@ async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name:
     except:
         formatted_date = date
     
+    maps_link = ""
+    if latitude and longitude:
+        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+    
+    # Use template if configured
+    if TWILIO_TEMPLATE_REMINDER:
+        return await send_whatsapp_template(phone, TWILIO_TEMPLATE_REMINDER, {
+            "1": barbershop_name,
+            "2": service_name,
+            "3": formatted_date,
+            "4": time,
+            "5": address or "Não informado",
+            "6": maps_link or "Não disponível"
+        })
+    
+    # Fallback to body message (for sandbox/testing)
     message_body = f"""🔔 *Lembrete de Agendamento*
 
 Olá! Você tem um horário marcado na *{barbershop_name}* em 30 minutos!
@@ -744,9 +760,7 @@ Olá! Você tem um horário marcado na *{barbershop_name}* em 30 minutos!
     if address:
         message_body += f"\n📌 Endereço: {address}"
     
-    # Add Google Maps link if coordinates available
-    if latitude and longitude:
-        maps_link = f"https://www.google.com/maps?q={latitude},{longitude}"
+    if maps_link:
         message_body += f"\n🗺️ Ver no mapa: {maps_link}"
     
     message_body += "\n\nTe esperamos! 💈"
