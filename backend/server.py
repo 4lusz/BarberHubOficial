@@ -1390,13 +1390,22 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
     if not current_user.get("barbershop_id"):
         raise HTTPException(status_code=404, detail="Barbearia não encontrada")
     
+    # Get barbershop to check expiration date
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0}
+    )
+    
+    if not barbershop:
+        raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+    
     # Get subscription
     subscription = await db.subscriptions.find_one(
         {"user_id": current_user["user_id"]},
         {"_id": 0}
     )
     
-    # If there's a Mercado Pago preapproval, try to cancel it
+    # If there's a Mercado Pago preapproval, try to cancel it (stop future charges)
     if subscription and subscription.get("mp_preapproval_id") and MERCADOPAGO_ACCESS_TOKEN:
         try:
             async with httpx.AsyncClient() as client_http:
@@ -1421,24 +1430,35 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
         {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
     )
     
-    # Update barbershop - immediately set to cancelled (user loses access now)
+    # Update barbershop - KEEP plan_status as 'active' but disable auto_renew
+    # User keeps access until plan_expires_at
     await db.barbershops.update_one(
         {"barbershop_id": current_user["barbershop_id"]},
         {"$set": {
-            "plan_status": "cancelled",
             "auto_renew": False,
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
+    
+    # Format expiration date for message
+    expires_at = barbershop.get("plan_expires_at", "")
+    try:
+        exp_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        exp_formatted = exp_date.strftime("%d/%m/%Y")
+    except:
+        exp_formatted = "data não disponível"
     
     # Send WhatsApp confirmation
     user = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0})
     if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
         message = f"""📋 *Cancelamento de Assinatura*
 
-Sua assinatura do BarberHub foi cancelada conforme solicitado.
+Sua renovação automática foi cancelada conforme solicitado.
 
-Para reativar, basta escolher um novo plano em nosso site.
+Você continuará tendo acesso até: *{exp_formatted}*
+
+Após essa data, caso queira continuar usando, basta escolher um novo plano.
 
 Obrigado por usar o BarberHub! 💈"""
         
@@ -1446,7 +1466,8 @@ Obrigado por usar o BarberHub! 💈"""
     
     return {
         "success": True,
-        "message": "Assinatura cancelada."
+        "message": f"Assinatura cancelada. Você terá acesso até {exp_formatted}.",
+        "expires_at": expires_at
     }
 
 @api_router.post("/subscription/cancel-pending")
