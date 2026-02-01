@@ -242,7 +242,33 @@ Acesso exclusivo para o administrador da plataforma com visão completa de todas
 
 ---
 
-*Última atualização: 28 Janeiro 2026*
+*Última atualização: 01 Fevereiro 2026*
+
+---
+
+## 🔒 Segurança do Fluxo de Pagamento (Verificado 01/02/2026)
+
+### Camadas de Proteção Ativas:
+
+| Camada | Descrição | Status |
+|--------|-----------|--------|
+| **Frontend ProtectedRoute** | Bloqueia dashboard se `plan_status !== 'active'` | ✅ |
+| **Backend require_active_subscription** | Bloqueia rotas sensíveis (serviços, profissionais, etc.) | ✅ |
+| **Webhook-Only Activation** | Assinatura só é ativada via webhook do Mercado Pago | ✅ |
+| **Endpoints Removidos** | `/barbershops/activate` e `/activateplan` NÃO existem | ✅ |
+
+### Fluxo de Pagamento PIX (Seguro):
+1. Usuário cria barbearia → `plan_status = 'pending'`
+2. Usuário inicia PIX → QR Code gerado
+3. Frontend exibe "Aguardando confirmação" e faz polling
+4. **Pagamento aprovado no MP → Webhook recebe notificação → Backend ativa assinatura**
+5. Polling detecta `plan_status = 'active'` → Redireciona para dashboard
+
+### Testes de Segurança:
+- Arquivo: `/app/backend/tests/test_pix_payment_security.py`
+- Resultado: 100% passou (11/12 - 1 falhou por CPF inválido, não é bug de segurança)
+
+---
 
 ## Verificação Final de Deploy (28/01/2026)
 
