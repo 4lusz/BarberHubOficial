@@ -3308,7 +3308,14 @@ async def add_vip_client(data: VipClientCreate, current_user: dict = Depends(req
     del client_doc["_id"]
     
     # Send WhatsApp notification
-    message = f"""🌟 *Parabéns, você é VIP!*
+    if TWILIO_TEMPLATE_VIP_WELCOME:
+        await send_whatsapp_template(normalized_phone, TWILIO_TEMPLATE_VIP_WELCOME, {
+            "1": data.client_name,
+            "2": barbershop['name'],
+            "3": str(int(data.discount_percentage))
+        })
+    else:
+        message = f"""🌟 *Parabéns, você é VIP!*
 
 Olá {data.client_name}!
 
@@ -3318,7 +3325,7 @@ Você agora faz parte dos clientes especiais da *{barbershop['name']}*!
 
 Agende seu próximo horário e aproveite! 💈"""
     
-    await send_whatsapp_message(normalized_phone, message)
+        await send_whatsapp_message(normalized_phone, message)
     
     return client_doc
 
