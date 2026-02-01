@@ -55,6 +55,134 @@ const FONT_STYLES = [
   { id: 'bold', name: 'Bold', font: 'Arial Black, sans-serif' },
 ];
 
+// Banner Adjustment Modal
+const BannerAdjustModal = ({ isOpen, onClose, imageUrl, currentZoom, currentOffsetY, onSave }) => {
+  const [zoom, setZoom] = useState(currentZoom || 100);
+  const [offsetY, setOffsetY] = useState(currentOffsetY || 50);
+  const [saving, setSaving] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave(zoom, offsetY);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-4 border-b border-border flex justify-between items-center">
+          <h3 className="font-semibold text-lg">Ajustar Banner</h3>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        <div className="p-4 space-y-4">
+          {/* Preview */}
+          <div 
+            className="relative w-full h-48 rounded-lg border border-border overflow-hidden bg-secondary"
+            style={{
+              backgroundImage: `url(${imageUrl})`,
+              backgroundSize: `${zoom}%`,
+              backgroundPosition: `center ${offsetY}%`,
+              backgroundRepeat: 'no-repeat'
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/30" />
+            <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+              Preview do Banner
+            </div>
+          </div>
+          
+          {/* Zoom Control */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label>Zoom: {zoom}%</Label>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setZoom(100)}
+                >
+                  Resetar
+                </Button>
+              </div>
+            </div>
+            <input
+              type="range"
+              min="100"
+              max="200"
+              value={zoom}
+              onChange={(e) => setZoom(parseInt(e.target.value))}
+              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+            <p className="text-xs text-muted-foreground">
+              Aumente o zoom para recortar a imagem
+            </p>
+          </div>
+          
+          {/* Position Y Control */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label>Posição Vertical: {offsetY}%</Label>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setOffsetY(0)}
+                >
+                  Topo
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setOffsetY(50)}
+                >
+                  Centro
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setOffsetY(100)}
+                >
+                  Baixo
+                </Button>
+              </div>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={offsetY}
+              onChange={(e) => setOffsetY(parseInt(e.target.value))}
+              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+            <p className="text-xs text-muted-foreground">
+              Ajuste qual parte da imagem aparece no banner
+            </p>
+          </div>
+        </div>
+        
+        <div className="p-4 border-t border-border flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar Ajuste'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function SettingsPage() {
   const { barbershop, updateBarbershop } = useAuth();
   const [saving, setSaving] = useState(false);
