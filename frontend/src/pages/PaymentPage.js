@@ -129,7 +129,7 @@ export default function PaymentPage() {
     setLoading(true);
 
     try {
-      // First create the barbershop
+      // Create or update barbershop (backend handles both cases)
       await api.post('/barbershops', {
         name: barbershopData.name,
         address: barbershopData.address,
@@ -137,6 +137,9 @@ export default function PaymentPage() {
         latitude: barbershopData.latitude,
         longitude: barbershopData.longitude,
       });
+
+      // Refresh auth to get updated barbershop_id
+      await checkAuth();
 
       // Then process payment/subscription
       const paymentResponse = await api.post('/subscription/create', {
