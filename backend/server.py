@@ -2946,7 +2946,7 @@ async def cancel_appointment(appointment_id: str, current_user: dict = Depends(g
 # ==================== DASHBOARD STATS ====================
 
 @api_router.get("/dashboard/stats")
-async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+async def get_dashboard_stats(current_user: dict = Depends(require_active_subscription)):
     if not current_user.get("barbershop_id"):
         return {}
     
@@ -3082,7 +3082,7 @@ async def check_premium_access(current_user: dict):
     return barbershop
 
 @api_router.get("/vip-clients")
-async def list_vip_clients(current_user: dict = Depends(get_current_user)):
+async def list_vip_clients(current_user: dict = Depends(require_active_subscription)):
     """List all VIP clients for a barbershop (Premium only)"""
     barbershop = await check_premium_access(current_user)
     
@@ -3094,7 +3094,7 @@ async def list_vip_clients(current_user: dict = Depends(get_current_user)):
     return clients
 
 @api_router.post("/vip-clients")
-async def add_vip_client(data: VipClientCreate, current_user: dict = Depends(get_current_user)):
+async def add_vip_client(data: VipClientCreate, current_user: dict = Depends(require_active_subscription)):
     """Add a VIP client (Premium only)"""
     barbershop = await check_premium_access(current_user)
     
@@ -3144,7 +3144,7 @@ Agende seu próximo horário e aproveite! 💈"""
     return client_doc
 
 @api_router.put("/vip-clients/{vip_id}")
-async def update_vip_client(vip_id: str, data: VipClientUpdate, current_user: dict = Depends(get_current_user)):
+async def update_vip_client(vip_id: str, data: VipClientUpdate, current_user: dict = Depends(require_active_subscription)):
     """Update a VIP client (Premium only)"""
     barbershop = await check_premium_access(current_user)
     
@@ -3167,7 +3167,7 @@ async def update_vip_client(vip_id: str, data: VipClientUpdate, current_user: di
     return updated
 
 @api_router.delete("/vip-clients/{vip_id}")
-async def remove_vip_client(vip_id: str, current_user: dict = Depends(get_current_user)):
+async def remove_vip_client(vip_id: str, current_user: dict = Depends(require_active_subscription)):
     """Remove a VIP client (Premium only)"""
     barbershop = await check_premium_access(current_user)
     
@@ -3241,7 +3241,7 @@ async def get_daily_report(
     }
 
 @api_router.get("/reports/weekly")
-async def get_weekly_report(current_user: dict = Depends(get_current_user)):
+async def get_weekly_report(current_user: dict = Depends(require_active_subscription)):
     """Get weekly report with daily breakdown - Premium only"""
     if not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
@@ -3294,7 +3294,7 @@ async def get_weekly_report(current_user: dict = Depends(get_current_user)):
     }
 
 @api_router.get("/reports/clients")
-async def get_clients_report(current_user: dict = Depends(get_current_user)):
+async def get_clients_report(current_user: dict = Depends(require_active_subscription)):
     """Get clients report - Premium only"""
     if not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
