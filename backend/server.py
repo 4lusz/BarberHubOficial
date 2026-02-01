@@ -398,6 +398,59 @@ async def get_current_user(request: Request, credentials = Depends(security)) ->
     
     raise HTTPException(status_code=401, detail="Não autenticado")
 
+async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> dict:
+    """
+    Dependency that ensures the user has an active subscription.
+    Use this for all sensitive barber routes.
+    """
+    if current_user["role"] != "barber":
+        # Non-barber users (clients) don't need subscription check
+        return current_user
+    
+    if not current_user.get("barbershop_id"):
+        raise HTTPException(
+            status_code=403, 
+            detail="Assinatura necessária. Por favor, escolha um plano para continuar."
+        )
+    
+    barbershop = await db.barbershops.find_one(
+        {"barbershop_id": current_user["barbershop_id"]},
+        {"_id": 0, "plan_status": 1, "plan_expires_at": 1}
+    )
+    
+    if not barbershop:
+        raise HTTPException(
+            status_code=403, 
+            detail="Barbearia não encontrada. Por favor, complete seu cadastro."
+        )
+    
+    if barbershop.get("plan_status") != "active":
+        raise HTTPException(
+            status_code=403, 
+            detail="Assinatura inativa. Por favor, renove seu plano para continuar."
+        )
+    
+    # Also check if expired (in case job hasn't run yet)
+    expires_at = barbershop.get("plan_expires_at")
+    if expires_at:
+        try:
+            exp_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if exp_date < datetime.now(timezone.utc):
+                # Mark as expired
+                await db.barbershops.update_one(
+                    {"barbershop_id": current_user["barbershop_id"]},
+                    {"$set": {"plan_status": "expired"}}
+                )
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Assinatura expirada. Por favor, renove seu plano para continuar."
+                )
+        except ValueError:
+            pass
+    
+    return current_user
+
+
 async def get_optional_user(request: Request, credentials = Depends(security)) -> Optional[dict]:
     try:
         return await get_current_user(request, credentials)
