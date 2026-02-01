@@ -1999,9 +1999,19 @@ async def handle_payment_notification(payment_id: str):
                             
                             if phone_to_use and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
                                 plan_info = SUBSCRIPTION_PLANS.get(plan_id, {})
-                                message = f"""✅ *Pagamento PIX Confirmado!*
+                                amount = payment_data.get('transaction_amount', 0)
+                                
+                                # Use template if configured
+                                if TWILIO_TEMPLATE_PIX_CONFIRMATION:
+                                    await send_whatsapp_template(phone_to_use, TWILIO_TEMPLATE_PIX_CONFIRMATION, {
+                                        "1": f"{amount:.2f}",
+                                        "2": plan_info.get('name', plan_id)
+                                    })
+                                else:
+                                    # Fallback to body message
+                                    message = f"""✅ *Pagamento PIX Confirmado!*
 
-Seu pagamento de R$ {payment_data.get('transaction_amount', 0):.2f} foi confirmado.
+Seu pagamento de R$ {amount:.2f} foi confirmado.
 
 Plano: {plan_info.get('name', plan_id)}
 Sua assinatura está ativa!
@@ -2009,7 +2019,7 @@ Sua assinatura está ativa!
 Acesse seu dashboard em barberhubpro.com.br
 
 Obrigado por escolher o BarberHub! 💈"""
-                                await send_whatsapp_message(phone_to_use, message)
+                                    await send_whatsapp_message(phone_to_use, message)
                                 logger.info(f"WhatsApp sent to {phone_to_use} for PIX payment confirmation")
                         
                 elif status in ["rejected", "cancelled"]:
