@@ -608,8 +608,18 @@ def get_twilio_client():
         return TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     return None
 
+# Twilio Content Template SIDs (configure in .env after approval)
+TWILIO_TEMPLATE_BOOKING_CONFIRMATION = os.environ.get('TWILIO_TEMPLATE_BOOKING_CONFIRMATION', '')
+TWILIO_TEMPLATE_BOOKING_VIP = os.environ.get('TWILIO_TEMPLATE_BOOKING_VIP', '')
+TWILIO_TEMPLATE_REMINDER = os.environ.get('TWILIO_TEMPLATE_REMINDER', '')
+TWILIO_TEMPLATE_PIX_CONFIRMATION = os.environ.get('TWILIO_TEMPLATE_PIX_CONFIRMATION', '')
+TWILIO_TEMPLATE_RENEWAL = os.environ.get('TWILIO_TEMPLATE_RENEWAL', '')
+TWILIO_TEMPLATE_PAYMENT_FAILED = os.environ.get('TWILIO_TEMPLATE_PAYMENT_FAILED', '')
+TWILIO_TEMPLATE_RENEWAL_REMINDER = os.environ.get('TWILIO_TEMPLATE_RENEWAL_REMINDER', '')
+TWILIO_TEMPLATE_VIP_WELCOME = os.environ.get('TWILIO_TEMPLATE_VIP_WELCOME', '')
+
 async def send_whatsapp_message(phone: str, message: str):
-    """Send WhatsApp message via Twilio API"""
+    """Send WhatsApp message via Twilio API - DEPRECATED, use send_whatsapp_template instead"""
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
         logger.warning("Twilio not configured, skipping WhatsApp")
         return None
@@ -659,6 +669,56 @@ async def send_whatsapp_message(phone: str, message: str):
             
     except Exception as e:
         logger.error(f"Twilio failed: {str(e)}")
+        return None
+
+async def send_whatsapp_template(phone: str, content_sid: str, content_variables: dict):
+    """Send WhatsApp message via Twilio using approved templates"""
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        logger.warning("Twilio not configured, skipping WhatsApp")
+        return None
+    
+    if not TWILIO_MESSAGING_SERVICE_SID:
+        logger.warning("TWILIO_MESSAGING_SERVICE_SID not configured for templates")
+        return None
+    
+    if not content_sid:
+        logger.warning("Template content_sid not provided")
+        return None
+    
+    try:
+        formatted_phone = format_phone_for_whatsapp(phone)
+        
+        def send_template():
+            client = get_twilio_client()
+            if not client:
+                return None
+            
+            to_whatsapp = f"whatsapp:+{formatted_phone}"
+            
+            # Convert variables dict to JSON string
+            import json
+            variables_json = json.dumps(content_variables)
+            
+            msg = client.messages.create(
+                messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
+                to=to_whatsapp,
+                content_sid=content_sid,
+                content_variables=variables_json
+            )
+            return msg.sid
+        
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, send_template)
+        
+        if result:
+            logger.info(f"WhatsApp template sent to {phone}, SID: {result}")
+            return result
+        else:
+            logger.error("Twilio client not available")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Twilio template failed: {str(e)}")
         return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
