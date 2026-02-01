@@ -754,13 +754,13 @@ export default function PublicBookingPage() {
                     Nenhum horário disponível nesta data
                   </p>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {availableSlots.map((slot) => (
                       <Button
                         key={slot.time}
                         variant={booking.time === slot.time ? "default" : "outline"}
                         onClick={() => handleTimeSelect(slot.time)}
-                        className={booking.time === slot.time ? 'text-black' : 'border-gray-700 text-white'}
+                        className={`min-w-0 px-2 ${booking.time === slot.time ? 'text-black' : 'border-gray-700 text-white hover:bg-white/10'}`}
                         style={booking.time === slot.time ? { backgroundColor: primaryColor } : {}}
                         data-testid={`time-${slot.time}`}
                       >
