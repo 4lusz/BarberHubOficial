@@ -404,6 +404,27 @@ export default function PaymentPage() {
                       </Label>
                     </div>
                   </RadioGroup>
+                  
+                  {/* Payment Method Info */}
+                  <div className="mt-3 p-3 bg-secondary/30 rounded-lg text-xs text-muted-foreground">
+                    {paymentMethod === 'pix' ? (
+                      <div className="flex items-start gap-2">
+                        <QrCode className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                        <div>
+                          <p className="font-medium text-foreground">PIX - Pagamento Manual</p>
+                          <p>A renovação <strong>não é automática</strong>. Você receberá um lembrete antes do vencimento para realizar o pagamento do próximo mês.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <CreditCard className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                        <div>
+                          <p className="font-medium text-foreground">Cartão - Renovação Automática</p>
+                          <p>A cobrança será feita automaticamente todo mês. Pode ser necessário criar ou fazer login em uma conta do Mercado Pago.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Submit */}
