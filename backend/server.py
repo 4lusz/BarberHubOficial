@@ -1889,10 +1889,13 @@ async def handle_subscription_notification(preapproval_id: str):
                 
                 if status == "authorized" and external_ref:
                     # Subscription is authorized and active
+                    # external_reference format: user_XXXXX_planid_timestamp
                     parts = external_ref.split("_")
-                    if len(parts) >= 2:
-                        user_id = parts[0]
-                        plan_id = parts[1]
+                    if len(parts) >= 3:
+                        user_id = f"{parts[0]}_{parts[1]}"
+                        plan_id = parts[2]
+                        
+                        logger.info(f"Activating card subscription for user_id={user_id}, plan_id={plan_id}")
                         
                         # Update subscription record
                         await db.subscriptions.update_one(
