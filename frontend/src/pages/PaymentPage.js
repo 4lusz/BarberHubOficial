@@ -163,12 +163,10 @@ export default function PaymentPage() {
         } else if (paymentResponse.data.payment_url) {
           // Card payment - redirect to Mercado Pago
           window.location.href = paymentResponse.data.payment_url;
-        } else if (paymentResponse.data.demo_mode) {
-          // Demo mode - activate barbershop directly
-          await api.post(`/barbershops/activate?plan_id=${planId}`);
-          toast.success('Pagamento processado com sucesso!');
-          await checkAuth();
-          navigate('/dashboard');
+        } else {
+          // Payment created but no redirect - show waiting message
+          toast.info('Pagamento iniciado. Aguardando confirmação...');
+          navigate('/escolher-plano');
         }
       }
     } catch (error) {
