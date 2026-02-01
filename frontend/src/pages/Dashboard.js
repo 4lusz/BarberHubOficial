@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '../lib/utils';
@@ -20,27 +20,15 @@ import { toast } from 'sonner';
 
 export default function Dashboard() {
   const { barbershop } = useAuth();
-  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [todayAppointments, setTodayAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Protect dashboard - only active subscriptions allowed
   useEffect(() => {
-    if (barbershop && barbershop.plan_status !== 'active') {
-      toast.info('Complete seu pagamento para acessar o dashboard');
-      navigate('/escolher-plano', { replace: true });
-    }
-  }, [barbershop, navigate]);
-
-  useEffect(() => {
-    // Only fetch data if subscription is active
-    if (barbershop?.plan_status === 'active') {
-      fetchData();
-    }
-  }, [barbershop]);
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
     try {
