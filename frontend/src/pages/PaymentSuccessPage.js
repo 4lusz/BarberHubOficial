@@ -1,36 +1,19 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { CheckCircle, Loader2, XCircle, Clock, ArrowRight, RefreshCw } from 'lucide-react';
+import { CheckCircle, Loader2, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PaymentSuccessPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { checkAuth, barbershop } = useAuth();
-  const [status, setStatus] = useState('checking'); // checking, approved, pending, error
+  const { checkAuth } = useAuth();
+  const [status, setStatus] = useState('checking'); // checking, approved, pending
   const [checking, setChecking] = useState(false);
 
-  // Check payment status on mount
-  useEffect(() => {
-    checkPaymentStatus();
-  }, []);
-
-  // Poll for status updates if pending
-  useEffect(() => {
-    if (status !== 'pending') return;
-    
-    const pollInterval = setInterval(() => {
-      checkPaymentStatus();
-    }, 5000);
-    
-    return () => clearInterval(pollInterval);
-  }, [status]);
-
-  const checkPaymentStatus = async () => {
+  const checkPaymentStatus = useCallback(async () => {
     try {
       // Refresh auth to get latest barbershop status
       await checkAuth();
@@ -49,7 +32,23 @@ export default function PaymentSuccessPage() {
       console.error('Error checking status:', error);
       setStatus('pending');
     }
-  };
+  }, [checkAuth]);
+
+  // Check payment status on mount
+  useEffect(() => {
+    checkPaymentStatus();
+  }, [checkPaymentStatus]);
+
+  // Poll for status updates if pending
+  useEffect(() => {
+    if (status !== 'pending') return;
+    
+    const pollInterval = setInterval(() => {
+      checkPaymentStatus();
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
+  }, [status, checkPaymentStatus]);
 
   const handleManualCheck = async () => {
     setChecking(true);
