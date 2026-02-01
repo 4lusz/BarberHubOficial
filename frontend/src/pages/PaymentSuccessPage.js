@@ -4,72 +4,112 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { CheckCircle, Loader2, Scissors, ArrowRight } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PaymentSuccessPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { checkAuth } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { checkAuth, barbershop } = useAuth();
+  const [status, setStatus] = useState('checking'); // checking, approved, pending, error
+  const [checking, setChecking] = useState(false);
 
+  // Check payment status on mount
   useEffect(() => {
-    const activateBarbershop = async () => {
-      try {
-        // Get external_reference from URL params (contains user_id and plan_id)
-        const externalRef = searchParams.get('external_reference');
-        const paymentId = searchParams.get('payment_id');
-        const status = searchParams.get('status');
-        
-        if (status === 'approved' || !status) {
-          // Activate the barbershop
-          const planId = externalRef?.split('_')[1] || 'comum';
-          await api.post(`/barbershops/activate?plan_id=${planId}`);
-          
-          // Refresh auth state
-          await checkAuth();
-          
-          toast.success('Pagamento confirmado! Sua barbearia está ativa.');
-        } else {
-          setError('Pagamento não aprovado. Por favor, tente novamente.');
-        }
-      } catch (err) {
-        console.error('Activation error:', err);
-        setError('Erro ao ativar barbearia. Por favor, entre em contato com o suporte.');
-      } finally {
-        setLoading(false);
+    checkPaymentStatus();
+  }, []);
+
+  // Poll for status updates if pending
+  useEffect(() => {
+    if (status !== 'pending') return;
+    
+    const pollInterval = setInterval(() => {
+      checkPaymentStatus();
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
+  }, [status]);
+
+  const checkPaymentStatus = async () => {
+    try {
+      // Refresh auth to get latest barbershop status
+      await checkAuth();
+      
+      // Check barbershop status from backend
+      const response = await api.get('/barbershops/me');
+      const currentStatus = response.data?.plan_status;
+      
+      if (currentStatus === 'active') {
+        setStatus('approved');
+        toast.success('Pagamento confirmado!');
+      } else {
+        setStatus('pending');
       }
-    };
+    } catch (error) {
+      console.error('Error checking status:', error);
+      setStatus('pending');
+    }
+  };
 
-    activateBarbershop();
-  }, [searchParams, checkAuth]);
+  const handleManualCheck = async () => {
+    setChecking(true);
+    await checkPaymentStatus();
+    setChecking(false);
+    
+    if (status !== 'approved') {
+      toast.info('Aguardando confirmação do pagamento...');
+    }
+  };
 
-  if (loading) {
+  const handleGoToDashboard = async () => {
+    await checkAuth();
+    navigate('/dashboard');
+  };
+
+  // Show loading state
+  if (status === 'checking') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="border-border max-w-md w-full">
           <CardContent className="py-12 text-center">
             <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin mb-4" />
-            <p className="text-lg">Confirmando seu pagamento...</p>
+            <p className="text-lg">Verificando seu pagamento...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (error) {
+  // Payment approved - show success
+  if (status === 'approved') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="border-border max-w-md w-full">
-          <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-              <Scissors className="w-8 h-8 text-destructive" />
+          <CardHeader className="text-center">
+            <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-10 h-10 text-green-500" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Ops!</h2>
-            <p className="text-muted-foreground mb-6">{error}</p>
-            <Button onClick={() => navigate('/pagamento')} data-testid="retry-payment-button">
-              Tentar Novamente
+            <CardTitle className="font-heading text-2xl uppercase">
+              Pagamento Confirmado!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-6">
+            <p className="text-muted-foreground">
+              Sua barbearia foi ativada com sucesso. Agora você pode começar a receber agendamentos!
+            </p>
+            
+            <div className="bg-primary/10 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-1">Próximo passo</p>
+              <p className="font-medium">Configure seus serviços e horários de funcionamento</p>
+            </div>
+
+            <Button 
+              onClick={handleGoToDashboard} 
+              className="w-full btn-press"
+              data-testid="go-to-dashboard-button"
+            >
+              Ir para o Dashboard
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </CardContent>
         </Card>
@@ -77,35 +117,63 @@ export default function PaymentSuccessPage() {
     );
   }
 
+  // Payment pending - waiting for webhook confirmation
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="border-border max-w-md w-full">
         <CardHeader className="text-center">
-          <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-10 h-10 text-green-500" />
+          <div className="w-20 h-20 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-10 h-10 text-yellow-500" />
           </div>
           <CardTitle className="font-heading text-2xl uppercase">
-            Pagamento Confirmado!
+            Aguardando Confirmação
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center space-y-6">
           <p className="text-muted-foreground">
-            Sua barbearia foi ativada com sucesso. Agora você pode começar a receber agendamentos!
+            Seu pagamento está sendo processado. Isso pode levar alguns minutos.
           </p>
           
-          <div className="bg-primary/10 rounded-lg p-4">
-            <p className="text-sm text-muted-foreground mb-1">Próximo passo</p>
-            <p className="font-medium">Configure seus serviços e horários de funcionamento</p>
+          <div className="bg-yellow-500/10 rounded-lg p-4">
+            <p className="text-sm text-yellow-600">
+              Esta página atualiza automaticamente quando o pagamento for confirmado.
+            </p>
           </div>
 
-          <Button 
-            onClick={() => navigate('/dashboard')} 
-            className="w-full btn-press"
-            data-testid="go-to-dashboard-button"
-          >
-            Ir para o Dashboard
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              onClick={handleManualCheck}
+              variant="outline"
+              className="w-full"
+              disabled={checking}
+              data-testid="check-status-button"
+            >
+              {checking ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Verificar Status
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              onClick={() => navigate('/escolher-plano')}
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              data-testid="back-to-plans-button"
+            >
+              Voltar para Planos
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Se o pagamento não for confirmado em alguns minutos, verifique se a transação foi concluída no seu banco ou cartão.
+          </p>
         </CardContent>
       </Card>
     </div>
