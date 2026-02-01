@@ -173,15 +173,17 @@ export default function SubscriptionPage() {
               Detalhes da Cobrança
             </CardTitle>
           </CardHeader>
-            </CardTitle>
-          </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between py-2 border-b border-border">
               <span className="text-muted-foreground">Status</span>
-              <span className="text-green-500">Ativo</span>
+              {isCancelled ? (
+                <span className="text-yellow-500">Cancelado</span>
+              ) : (
+                <span className="text-green-500">Ativo</span>
+              )}
             </div>
             <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">Próxima cobrança</span>
+              <span className="text-muted-foreground">{isCancelled ? 'Acesso até' : 'Próxima cobrança'}</span>
               <span>{formatDate(barbershop?.plan_expires_at)}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-border">
@@ -189,8 +191,12 @@ export default function SubscriptionPage() {
               <span className="font-medium">R$ {currentPlan.price.toFixed(2)}</span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-muted-foreground">Tipo de cobrança</span>
-              <span>Recorrente (automática)</span>
+              <span className="text-muted-foreground">Renovação automática</span>
+              {isCancelled ? (
+                <span className="text-yellow-500">Desativada</span>
+              ) : (
+                <span className="text-green-500">Ativa</span>
+              )}
             </div>
           </CardContent>
         </Card>
