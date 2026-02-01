@@ -2017,33 +2017,8 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
     
     return {k: v for k, v in barbershop_doc.items() if k != "_id"}
 
-@api_router.post("/barbershops/activate")
-async def activate_barbershop(plan_id: str, current_user: dict = Depends(get_current_user)):
-    """Activate barbershop after payment (demo mode)"""
-    if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
-        raise HTTPException(status_code=403, detail="Acesso negado")
-    
-    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
-    
-    await db.barbershops.update_one(
-        {"barbershop_id": current_user["barbershop_id"]},
-        {"$set": {
-            "plan": plan_id,
-            "plan_status": "active",
-            "plan_expires_at": expires_at.isoformat()
-        }}
-    )
-    
-    barbershop = await db.barbershops.find_one(
-        {"barbershop_id": current_user["barbershop_id"]},
-        {"_id": 0}
-    )
-    
-    return {
-        "success": True,
-        "barbershop": barbershop,
-        "message": "Barbearia ativada com sucesso!"
-    }
+# REMOVED: /barbershops/activate endpoint - SECURITY RISK
+# Subscription activation MUST only happen via webhook from Mercado Pago
 
 @api_router.put("/barbershops")
 async def update_barbershop(data: BarbershopUpdate, current_user: dict = Depends(get_current_user)):
