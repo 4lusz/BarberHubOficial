@@ -22,12 +22,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { user, needs_payment } = await login(formData.email, formData.password);
+      const { user, needs_payment, plan_status } = await login(formData.email, formData.password);
       toast.success('Bem-vindo de volta!');
       
       if (user.role === 'barber') {
+        // Check if user needs to complete payment
         if (needs_payment || !user.barbershop_id) {
-          navigate('/escolher-plano');
+          // If plan_status is pending, redirect to payment page to complete/restart
+          if (plan_status === 'pending') {
+            navigate('/assinatura');
+          } else {
+            navigate('/escolher-plano');
+          }
         } else {
           navigate('/dashboard');
         }
