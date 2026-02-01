@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    const { token, user: userData, needs_payment } = response.data;
+    const { token, user: userData, needs_payment, plan_status } = response.data;
     
     localStorage.setItem('token', token);
     setUser(userData);
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
       setBarbershop(barbershopRes.data);
     }
     
-    return { user: userData, needs_payment };
+    return { user: userData, needs_payment, plan_status };
   };
 
   const register = async (data) => {
