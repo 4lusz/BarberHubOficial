@@ -610,8 +610,12 @@ def get_twilio_client():
 
 async def send_whatsapp_message(phone: str, message: str):
     """Send WhatsApp message via Twilio API"""
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_WHATSAPP_NUMBER:
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
         logger.warning("Twilio not configured, skipping WhatsApp")
+        return None
+    
+    if not TWILIO_MESSAGING_SERVICE_SID and not TWILIO_WHATSAPP_NUMBER:
+        logger.warning("Neither TWILIO_MESSAGING_SERVICE_SID nor TWILIO_WHATSAPP_NUMBER configured")
         return None
     
     try:
@@ -623,15 +627,23 @@ async def send_whatsapp_message(phone: str, message: str):
             if not client:
                 return None
             
-            # Format numbers for WhatsApp
-            from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
             to_whatsapp = f"whatsapp:+{formatted_phone}"
             
-            msg = client.messages.create(
-                body=message,
-                from_=from_whatsapp,
-                to=to_whatsapp
-            )
+            # Prefer messaging_service_sid over from number
+            if TWILIO_MESSAGING_SERVICE_SID:
+                msg = client.messages.create(
+                    body=message,
+                    messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
+                    to=to_whatsapp
+                )
+            else:
+                # Fallback to from number
+                from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
+                msg = client.messages.create(
+                    body=message,
+                    from_=from_whatsapp,
+                    to=to_whatsapp
+                )
             return msg.sid
         
         # Execute in thread pool
