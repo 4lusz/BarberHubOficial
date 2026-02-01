@@ -1855,7 +1855,16 @@ async def handle_payment_notification(payment_id: str):
                         # Send WhatsApp confirmation for PIX payment
                         if payment_method == "pix":
                             user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-                            if user and user.get("phone") and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+                            barbershop = None
+                            if user and user.get("barbershop_id"):
+                                barbershop = await db.barbershops.find_one({"barbershop_id": user["barbershop_id"]}, {"_id": 0})
+                            
+                            # Try to get phone from user first, then from barbershop
+                            phone_to_use = user.get("phone") if user else None
+                            if not phone_to_use and barbershop:
+                                phone_to_use = barbershop.get("phone")
+                            
+                            if phone_to_use and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
                                 plan_info = SUBSCRIPTION_PLANS.get(plan_id, {})
                                 message = f"""✅ *Pagamento PIX Confirmado!*
 
@@ -1867,7 +1876,8 @@ Sua assinatura está ativa!
 Acesse seu dashboard em barberhubpro.com.br
 
 Obrigado por escolher o BarberHub! 💈"""
-                                await send_whatsapp_message(user["phone"], message)
+                                await send_whatsapp_message(phone_to_use, message)
+                                logger.info(f"WhatsApp sent to {phone_to_use} for PIX payment confirmation")
                         
                 elif status in ["rejected", "cancelled"]:
                     # Payment failed
