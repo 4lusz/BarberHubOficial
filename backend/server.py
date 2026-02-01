@@ -1789,21 +1789,25 @@ async def mercadopago_webhook(request: Request):
     """Handle Mercado Pago payment and subscription notifications"""
     try:
         data = await request.json()
-        logger.info(f"Mercado Pago webhook: {data}")
+        logger.info(f"Mercado Pago webhook received: {data}")
         
         notification_type = data.get("type")
+        action = data.get("action", "")
         resource_id = data.get("data", {}).get("id")
         
-        if notification_type == "payment":
-            # Handle payment notification
+        # Handle payment notifications (both 'payment' type and 'payment.xxx' actions)
+        if notification_type == "payment" or action.startswith("payment."):
+            logger.info(f"Processing payment notification: type={notification_type}, action={action}, id={resource_id}")
             await handle_payment_notification(resource_id)
         
-        elif notification_type == "subscription_preapproval":
+        elif notification_type == "subscription_preapproval" or action.startswith("subscription_preapproval"):
             # Handle subscription (preapproval) notification
+            logger.info(f"Processing subscription notification: id={resource_id}")
             await handle_subscription_notification(resource_id)
         
-        elif notification_type == "subscription_authorized_payment":
+        elif notification_type == "subscription_authorized_payment" or action.startswith("subscription_authorized_payment"):
             # Handle recurring payment notification
+            logger.info(f"Processing recurring payment notification: id={resource_id}")
             await handle_recurring_payment_notification(resource_id)
         
         return Response(status_code=200)
