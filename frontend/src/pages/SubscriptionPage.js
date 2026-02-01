@@ -41,18 +41,9 @@ const PLANS = {
 export default function SubscriptionPage() {
   const { barbershop, updateBarbershop } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-
-  useEffect(() => {
-    // If not active, redirect to plans page
-    if (barbershop && barbershop.plan_status !== 'active') {
-      navigate('/escolher-plano', { replace: true });
-      return;
-    }
-    setLoading(false);
-  }, [barbershop, navigate]);
 
   const handleCancelSubscription = async () => {
     setCancelling(true);
