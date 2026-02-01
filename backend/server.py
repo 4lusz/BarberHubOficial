@@ -1105,6 +1105,7 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
     
     # Delete old subscription records to start fresh
     await db.subscriptions.delete_many({"user_id": current_user["user_id"]})
+    await db.payments.delete_many({"user_id": current_user["user_id"], "status": "pending"})
     
     # Create payment preference with Mercado Pago for new subscriptions or pending ones
     if not MERCADOPAGO_ACCESS_TOKEN:
@@ -1116,13 +1117,109 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
             "plan": plan
         }
     
-    # Real Mercado Pago integration
-    # Using Preapproval (Subscriptions) API for recurring billing
+    frontend_url = os.environ.get('FRONTEND_URL', '')
+    if not frontend_url:
+        raise HTTPException(status_code=500, detail="FRONTEND_URL não configurado")
+    
+    # Route to appropriate payment method
+    payment_method = data.payment_method or "pix"
+    
+    if payment_method == "pix":
+        # Use Payment API for PIX - direct QR Code
+        return await create_pix_payment(data, plan, current_user, frontend_url)
+    else:
+        # Use Subscription API for card - recurring billing
+        return await create_card_subscription(data, plan, current_user, frontend_url)
+
+
+async def create_pix_payment(data: SubscriptionPayment, plan: dict, current_user: dict, frontend_url: str):
+    """Create a PIX payment for the first month - generates QR Code directly"""
     try:
-        frontend_url = os.environ.get('FRONTEND_URL', '')
-        if not frontend_url:
-            raise HTTPException(status_code=500, detail="FRONTEND_URL não configurado")
+        external_reference = f"{current_user['user_id']}_{data.plan_id}_{int(datetime.now(timezone.utc).timestamp())}"
         
+        # Create payment with PIX
+        payment_data = {
+            "transaction_amount": plan["price"],
+            "description": f"BarberHub - {plan['name']} (1º mês)",
+            "payment_method_id": "pix",
+            "payer": {
+                "email": data.customer_email,
+                "first_name": data.customer_name.split()[0] if data.customer_name else "Cliente",
+                "last_name": " ".join(data.customer_name.split()[1:]) if data.customer_name and len(data.customer_name.split()) > 1 else "BarberHub",
+                "identification": {
+                    "type": "CPF",
+                    "number": data.customer_document
+                }
+            },
+            "external_reference": external_reference,
+            "notification_url": f"{frontend_url}/api/webhooks/mercadopago"
+        }
+        
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.post(
+                "https://api.mercadopago.com/v1/payments",
+                json=payment_data,
+                headers={
+                    "Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}",
+                    "Content-Type": "application/json",
+                    "X-Idempotency-Key": external_reference
+                }
+            )
+            
+            if resp.status_code not in [200, 201]:
+                logger.error(f"Mercado Pago PIX error: {resp.status_code} - {resp.text}")
+                raise HTTPException(status_code=500, detail="Erro ao gerar PIX")
+            
+            mp_response = resp.json()
+            
+            # Get PIX data from response
+            pix_data = mp_response.get("point_of_interaction", {}).get("transaction_data", {})
+            qr_code = pix_data.get("qr_code")  # Copia e cola
+            qr_code_base64 = pix_data.get("qr_code_base64")  # Image
+            ticket_url = pix_data.get("ticket_url")  # URL to show PIX
+            
+            # Store payment info
+            payment_doc = {
+                "payment_id": f"pay_{uuid.uuid4().hex[:12]}",
+                "user_id": current_user["user_id"],
+                "barbershop_id": current_user.get("barbershop_id"),
+                "mp_payment_id": str(mp_response.get("id")),
+                "plan_id": data.plan_id,
+                "amount": plan["price"],
+                "payment_method": "pix",
+                "status": "pending",
+                "external_reference": external_reference,
+                "pix_qr_code": qr_code,
+                "pix_qr_code_base64": qr_code_base64,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+            }
+            
+            await db.payments.insert_one(payment_doc)
+            
+            logger.info(f"PIX payment created: {mp_response.get('id')} for user {current_user['user_id']}")
+            
+            return {
+                "success": True,
+                "payment_method": "pix",
+                "payment_id": mp_response.get("id"),
+                "pix_qr_code": qr_code,
+                "pix_qr_code_base64": qr_code_base64,
+                "ticket_url": ticket_url,
+                "plan": plan,
+                "expires_in_minutes": 30
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PIX payment error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar pagamento PIX")
+
+
+async def create_card_subscription(data: SubscriptionPayment, plan: dict, current_user: dict, frontend_url: str):
+    """Create a card subscription for recurring billing"""
+    try:
         # Create preapproval (subscription) for automatic recurring billing
         preapproval_data = {
             "reason": f"BarberHub - {plan['name']}",
@@ -1149,8 +1246,7 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
             
             if resp.status_code not in [200, 201]:
                 logger.error(f"Mercado Pago preapproval error: {resp.status_code} - {resp.text}")
-                # Fallback to simple checkout if preapproval fails
-                return await create_simple_checkout(data, plan, current_user)
+                raise HTTPException(status_code=500, detail="Erro ao criar assinatura")
             
             mp_response = resp.json()
             
@@ -1162,6 +1258,7 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
                     "plan_id": data.plan_id,
                     "mp_preapproval_id": mp_response.get("id"),
                     "status": "pending",
+                    "payment_method": "card",
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }},
                 upsert=True
@@ -1169,15 +1266,18 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
         
         return {
             "success": True,
+            "payment_method": "card",
             "payment_url": mp_response.get("init_point"),
             "subscription_id": mp_response.get("id"),
             "plan": plan,
             "recurring": True
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Mercado Pago error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro ao processar pagamento")
+        logger.error(f"Card subscription error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao processar assinatura")
 
 async def create_simple_checkout(data: SubscriptionPayment, plan: dict, current_user: dict):
     """Fallback to simple checkout preference (non-recurring)"""
