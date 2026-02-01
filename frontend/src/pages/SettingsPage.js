@@ -924,6 +924,18 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Banner Adjust Modal */}
+      {barbershop?.banner_url && (
+        <BannerAdjustModal
+          isOpen={showBannerAdjust}
+          onClose={() => setShowBannerAdjust(false)}
+          imageUrl={getImageUrl(barbershop.banner_url)}
+          currentZoom={barbershop?.banner_zoom || 100}
+          currentOffsetY={barbershop?.banner_offset_y ?? 50}
+          onSave={handleBannerAdjustSave}
+        />
+      )}
     </div>
   );
 }
