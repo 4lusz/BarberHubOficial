@@ -882,12 +882,29 @@ async def login(credentials: UserLogin):
     token = create_jwt_token(user["user_id"], user["email"], user["role"])
     
     # Check if user needs to complete payment
-    needs_payment = user["role"] == "barber" and not user.get("barbershop_id")
+    needs_payment = False
+    plan_status = None
+    
+    if user["role"] == "barber":
+        if not user.get("barbershop_id"):
+            # No barbershop created yet
+            needs_payment = True
+        else:
+            # Check barbershop plan status
+            barbershop = await db.barbershops.find_one(
+                {"barbershop_id": user["barbershop_id"]},
+                {"_id": 0, "plan_status": 1}
+            )
+            plan_status = barbershop.get("plan_status") if barbershop else None
+            # Needs payment if status is pending, expired, or cancelled
+            if plan_status in ["pending", "expired", "cancelled"]:
+                needs_payment = True
     
     return {
         "token": token,
         "user": {k: v for k, v in user.items() if k != "password"},
-        "needs_payment": needs_payment
+        "needs_payment": needs_payment,
+        "plan_status": plan_status
     }
 
 @api_router.post("/auth/client/register")
