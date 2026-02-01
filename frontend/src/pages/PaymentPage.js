@@ -228,75 +228,89 @@ export default function PaymentPage() {
             </CardContent>
           </Card>
 
-          {/* Barbershop Info */}
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
-                <Scissors className="w-5 h-5 text-primary" />
-                Dados da Barbearia
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="barbershop_name">Nome da Barbearia *</Label>
-                <Input
-                  id="barbershop_name"
-                  placeholder="Ex: Barbearia do João"
-                  value={barbershopData.name}
-                  onChange={(e) => setBarbershopData({ ...barbershopData, name: e.target.value })}
-                  required
-                  data-testid="barbershop-name-input"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="barbershop_phone">Telefone/WhatsApp</Label>
-                <Input
-                  id="barbershop_phone"
-                  placeholder="(11) 99999-9999"
-                  value={barbershopData.phone}
-                  onChange={(e) => setBarbershopData({ ...barbershopData, phone: e.target.value })}
-                  data-testid="barbershop-phone-input"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="barbershop_address">Endereço</Label>
-                <Input
-                  id="barbershop_address"
-                  placeholder="Rua, número, bairro, cidade..."
-                  value={barbershopData.address}
-                  onChange={(e) => setBarbershopData({ ...barbershopData, address: e.target.value })}
-                  data-testid="barbershop-address-input"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Localização (Google Maps)</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGetLocation}
-                    className="flex-1"
-                    data-testid="get-location-button"
-                  >
-                    <MapPin className="w-4 h-4 mr-2" />
-                    Obter Localização Atual
-                  </Button>
+          {/* Barbershop Info - Only show if user doesn't have one yet */}
+          {!hasBarbershop ? (
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
+                  <Scissors className="w-5 h-5 text-primary" />
+                  Dados da Barbearia
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="barbershop_name">Nome da Barbearia *</Label>
+                  <Input
+                    id="barbershop_name"
+                    placeholder="Ex: Barbearia do João"
+                    value={barbershopData.name}
+                    onChange={(e) => setBarbershopData({ ...barbershopData, name: e.target.value })}
+                    required
+                    data-testid="barbershop-name-input"
+                  />
                 </div>
-                {barbershopData.latitude && barbershopData.longitude && (
-                  <p className="text-sm text-green-500 flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    Localização capturada: {barbershopData.latitude.toFixed(4)}, {barbershopData.longitude.toFixed(4)}
+
+                <div className="space-y-2">
+                  <Label htmlFor="barbershop_phone">Telefone/WhatsApp</Label>
+                  <Input
+                    id="barbershop_phone"
+                    placeholder="(11) 99999-9999"
+                    value={barbershopData.phone}
+                    onChange={(e) => setBarbershopData({ ...barbershopData, phone: e.target.value })}
+                    data-testid="barbershop-phone-input"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="barbershop_address">Endereço</Label>
+                  <Input
+                    id="barbershop_address"
+                    placeholder="Rua, número, bairro, cidade..."
+                    value={barbershopData.address}
+                    onChange={(e) => setBarbershopData({ ...barbershopData, address: e.target.value })}
+                    data-testid="barbershop-address-input"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Localização (Google Maps)</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGetLocation}
+                      className="flex-1"
+                      data-testid="get-location-button"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Obter Localização Atual
+                    </Button>
+                  </div>
+                  {barbershopData.latitude && barbershopData.longitude && (
+                    <p className="text-sm text-green-500 flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      Localização capturada: {barbershopData.latitude.toFixed(4)}, {barbershopData.longitude.toFixed(4)}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    A localização será exibida aos clientes após o agendamento
                   </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  A localização será exibida aos clientes após o agendamento
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-border bg-secondary/30">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <Scissors className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium">{barbershopData.name}</p>
+                    <p className="text-sm text-muted-foreground">Barbearia já cadastrada</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Payment Form */}
           <Card className="border-border">
