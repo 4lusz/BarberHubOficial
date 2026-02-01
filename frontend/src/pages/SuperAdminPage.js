@@ -864,6 +864,33 @@ export default function SuperAdminPage() {
                     Ver página pública
                   </a>
                 </div>
+
+                {/* Delete Section */}
+                <div className="border-t border-destructive/30 pt-4 mt-4">
+                  <div className="bg-destructive/10 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-destructive mb-1">Zona de Perigo</h4>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Excluir permanentemente esta barbearia e todos os dados relacionados.
+                          Esta ação não pode ser desfeita.
+                        </p>
+                        <Button 
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteBarbershop(
+                            selectedBarbershop.barbershop.barbershop_id,
+                            selectedBarbershop.barbershop.name
+                          )}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir Barbearia
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}
