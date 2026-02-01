@@ -134,7 +134,8 @@ export const AuthProvider = ({ children }) => {
 
   const updateBarbershop = (data) => {
     setBarbershop(data);
-    setNeedsPayment(false);
+    // CRITICAL: Only set needsPayment to false if plan is actually active
+    setNeedsPayment(data?.plan_status !== 'active');
   };
 
   const value = {
