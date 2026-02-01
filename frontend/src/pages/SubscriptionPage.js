@@ -106,6 +106,24 @@ export default function SubscriptionPage() {
         </p>
       </div>
 
+      {/* Cancellation Notice */}
+      {isCancelled && (
+        <Card className="border-yellow-500/50 bg-yellow-500/10">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              <div>
+                <p className="font-medium text-yellow-500">Renovação automática cancelada</p>
+                <p className="text-sm text-muted-foreground">
+                  Você terá acesso até {formatDate(barbershop?.plan_expires_at)}. 
+                  Após essa data, escolha um novo plano para continuar usando.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Plan Card */}
       <Card className={`border-2 ${currentPlan.borderColor}`}>
         <CardContent className="py-6">
@@ -123,14 +141,24 @@ export default function SubscriptionPage() {
                 </p>
               </div>
             </div>
-            <Badge className="bg-green-500/20 text-green-500 border-green-500/30" data-testid="subscription-status">
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Ativo
-            </Badge>
+            {isCancelled ? (
+              <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30" data-testid="subscription-status">
+                <Clock className="w-4 h-4 mr-1" />
+                Cancelado
+              </Badge>
+            ) : (
+              <Badge className="bg-green-500/20 text-green-500 border-green-500/30" data-testid="subscription-status">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Ativo
+              </Badge>
+            )}
           </div>
           
           <p className="text-sm text-muted-foreground mt-4">
-            Sua assinatura está ativa e funcionando normalmente.
+            {isCancelled 
+              ? `Acesso válido até ${formatDate(barbershop?.plan_expires_at)}.`
+              : 'Sua assinatura está ativa e funcionando normalmente.'
+            }
           </p>
         </CardContent>
       </Card>
@@ -143,6 +171,8 @@ export default function SubscriptionPage() {
             <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
               Detalhes da Cobrança
+            </CardTitle>
+          </CardHeader>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
