@@ -2982,7 +2982,8 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     # Send WhatsApp confirmation
     if barbershop:
         try:
-            await send_whatsapp_booking_confirmation(
+            logger.info(f"Attempting to send WhatsApp confirmation to {normalized_phone}")
+            result = await send_whatsapp_booking_confirmation(
                 phone=normalized_phone,
                 client_name=data.client_name,
                 barbershop_name=barbershop["name"],
@@ -2996,8 +2997,12 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
                 latitude=barbershop.get("latitude"),
                 longitude=barbershop.get("longitude")
             )
+            if result:
+                logger.info(f"WhatsApp confirmation sent successfully: {result}")
+            else:
+                logger.warning(f"WhatsApp confirmation returned None for {normalized_phone}")
         except Exception as e:
-            logger.error(f"Failed to send WhatsApp confirmation: {str(e)}")
+            logger.error(f"Failed to send WhatsApp confirmation: {str(e)}", exc_info=True)
     
     # Send email notification
     if data.client_email and barbershop:
