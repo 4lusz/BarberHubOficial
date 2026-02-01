@@ -84,7 +84,7 @@ export default function SubscriptionPage() {
   const currentPlan = PLANS[barbershop?.plan] || PLANS.comum;
   const isPremium = barbershop?.plan === 'premium';
 
-  if (loading || !barbershop || barbershop.plan_status !== 'active') {
+  if (loading || !barbershop) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="skeleton h-8 w-64" />
