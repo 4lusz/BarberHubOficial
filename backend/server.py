@@ -11,7 +11,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
-import bcrypt
+from passlib.context import CryptContext
+
+# Password hashing configuration
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 import jwt
 from datetime import datetime, timezone, timedelta
 import httpx
