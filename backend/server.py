@@ -2364,7 +2364,7 @@ async def delete_service(service_id: str, current_user: dict = Depends(require_a
 # ==================== PROFESSIONALS ROUTES ====================
 
 @api_router.get("/professionals")
-async def get_professionals(current_user: dict = Depends(get_current_user)):
+async def get_professionals(current_user: dict = Depends(require_active_subscription)):
     if not current_user.get("barbershop_id"):
         return []
     
@@ -2375,7 +2375,7 @@ async def get_professionals(current_user: dict = Depends(get_current_user)):
     return professionals
 
 @api_router.post("/professionals")
-async def create_professional(data: ProfessionalCreate, current_user: dict = Depends(get_current_user)):
+async def create_professional(data: ProfessionalCreate, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2393,7 +2393,7 @@ async def create_professional(data: ProfessionalCreate, current_user: dict = Dep
     return {k: v for k, v in prof_doc.items() if k != "_id"}
 
 @api_router.put("/professionals/{professional_id}")
-async def update_professional(professional_id: str, data: ProfessionalCreate, current_user: dict = Depends(get_current_user)):
+async def update_professional(professional_id: str, data: ProfessionalCreate, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2409,7 +2409,7 @@ async def update_professional(professional_id: str, data: ProfessionalCreate, cu
     return prof
 
 @api_router.delete("/professionals/{professional_id}")
-async def delete_professional(professional_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_professional(professional_id: str, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2427,7 +2427,7 @@ async def delete_professional(professional_id: str, current_user: dict = Depends
 # ==================== BUSINESS HOURS ROUTES ====================
 
 @api_router.get("/business-hours")
-async def get_business_hours(current_user: dict = Depends(get_current_user)):
+async def get_business_hours(current_user: dict = Depends(require_active_subscription)):
     if not current_user.get("barbershop_id"):
         return []
     
@@ -2438,7 +2438,7 @@ async def get_business_hours(current_user: dict = Depends(get_current_user)):
     return hours
 
 @api_router.put("/business-hours")
-async def update_business_hours(hours: List[BusinessHoursCreate], current_user: dict = Depends(get_current_user)):
+async def update_business_hours(hours: List[BusinessHoursCreate], current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2468,7 +2468,7 @@ async def update_business_hours(hours: List[BusinessHoursCreate], current_user: 
 # ==================== TIME BLOCKS ROUTES ====================
 
 @api_router.get("/time-blocks")
-async def get_time_blocks(current_user: dict = Depends(get_current_user)):
+async def get_time_blocks(current_user: dict = Depends(require_active_subscription)):
     if not current_user.get("barbershop_id"):
         return []
     
@@ -2479,7 +2479,7 @@ async def get_time_blocks(current_user: dict = Depends(get_current_user)):
     return blocks
 
 @api_router.post("/time-blocks")
-async def create_time_block(data: TimeBlockCreate, current_user: dict = Depends(get_current_user)):
+async def create_time_block(data: TimeBlockCreate, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2498,7 +2498,7 @@ async def create_time_block(data: TimeBlockCreate, current_user: dict = Depends(
     return {k: v for k, v in block_doc.items() if k != "_id"}
 
 @api_router.delete("/time-blocks/{block_id}")
-async def delete_time_block(block_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_time_block(block_id: str, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
