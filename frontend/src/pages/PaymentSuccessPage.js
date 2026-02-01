@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
@@ -12,8 +12,10 @@ export default function PaymentSuccessPage() {
   const { checkAuth } = useAuth();
   const [status, setStatus] = useState('checking'); // checking, approved, pending
   const [checking, setChecking] = useState(false);
+  const initialized = useRef(false);
 
-  const checkPaymentStatus = useCallback(async () => {
+  // Check payment status
+  const checkPaymentStatus = async () => {
     try {
       // Refresh auth to get latest barbershop status
       await checkAuth();
@@ -24,38 +26,53 @@ export default function PaymentSuccessPage() {
       
       if (currentStatus === 'active') {
         setStatus('approved');
-        toast.success('Pagamento confirmado!');
+        return true;
       } else {
         setStatus('pending');
+        return false;
       }
     } catch (error) {
       console.error('Error checking status:', error);
       setStatus('pending');
+      return false;
     }
-  }, [checkAuth]);
+  };
 
   // Check payment status on mount
   useEffect(() => {
-    checkPaymentStatus();
-  }, [checkPaymentStatus]);
+    if (initialized.current) return;
+    initialized.current = true;
+    
+    checkPaymentStatus().then(approved => {
+      if (approved) {
+        toast.success('Pagamento confirmado!');
+      }
+    });
+  }, []);
 
   // Poll for status updates if pending
   useEffect(() => {
     if (status !== 'pending') return;
     
-    const pollInterval = setInterval(() => {
-      checkPaymentStatus();
+    const pollInterval = setInterval(async () => {
+      const approved = await checkPaymentStatus();
+      if (approved) {
+        toast.success('Pagamento confirmado!');
+        clearInterval(pollInterval);
+      }
     }, 5000);
     
     return () => clearInterval(pollInterval);
-  }, [status, checkPaymentStatus]);
+  }, [status]);
 
   const handleManualCheck = async () => {
     setChecking(true);
-    await checkPaymentStatus();
+    const approved = await checkPaymentStatus();
     setChecking(false);
     
-    if (status !== 'approved') {
+    if (approved) {
+      toast.success('Pagamento confirmado!');
+    } else {
       toast.info('Aguardando confirmação do pagamento...');
     }
   };
