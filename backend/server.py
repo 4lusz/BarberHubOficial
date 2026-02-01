@@ -338,10 +338,15 @@ def generate_slug(name: str) -> str:
     return slug.strip('-')
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    """Hash password using passlib bcrypt - always returns string"""
+    return pwd_context.hash(password)
 
 def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+    """Verify password against hash using passlib"""
+    try:
+        return pwd_context.verify(password, hashed)
+    except Exception:
+        return False
 
 def create_jwt_token(user_id: str, email: str, role: str) -> str:
     payload = {
