@@ -1615,7 +1615,7 @@ async def get_pending_subscription_status(current_user: dict = Depends(get_curre
 
 @api_router.get("/payment/pix-status/{payment_id}")
 async def check_pix_status(payment_id: str, current_user: dict = Depends(get_current_user)):
-    """Check PIX payment status - used for polling"""
+    """Check PIX payment status - used for polling. Does NOT activate subscription."""
     try:
         # First check local database
         payment = await db.payments.find_one(
@@ -1624,13 +1624,25 @@ async def check_pix_status(payment_id: str, current_user: dict = Depends(get_cur
         )
         
         if payment and payment.get("status") == "approved":
-            return {
-                "status": "approved",
-                "message": "Pagamento confirmado!",
-                "redirect_to": "/dashboard"
-            }
+            # Payment was already approved via webhook - check if barbershop is active
+            barbershop = await db.barbershops.find_one(
+                {"barbershop_id": current_user.get("barbershop_id")},
+                {"_id": 0}
+            )
+            if barbershop and barbershop.get("plan_status") == "active":
+                return {
+                    "status": "approved",
+                    "message": "Pagamento confirmado!",
+                    "redirect_to": "/dashboard"
+                }
+            else:
+                # Payment approved but barbershop not active yet - webhook processing
+                return {
+                    "status": "processing",
+                    "message": "Processando ativação..."
+                }
         
-        # Check with Mercado Pago API
+        # Check with Mercado Pago API for status updates
         if MERCADOPAGO_ACCESS_TOKEN:
             async with httpx.AsyncClient() as client_http:
                 resp = await client_http.get(
@@ -1642,28 +1654,31 @@ async def check_pix_status(payment_id: str, current_user: dict = Depends(get_cur
                     mp_data = resp.json()
                     status = mp_data.get("status")
                     
-                    # Update local record
+                    # Update local record status only (do NOT activate subscription here)
                     if payment:
                         await db.payments.update_one(
                             {"mp_payment_id": str(payment_id)},
-                            {"$set": {"status": status}}
+                            {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
                         )
                     
                     if status == "approved":
-                        # Process approval if not already done
-                        external_ref = mp_data.get("external_reference", "")
-                        if external_ref:
-                            parts = external_ref.split("_")
-                            if len(parts) >= 2:
-                                user_id = parts[0]
-                                plan_id = parts[1]
-                                await activate_subscription(user_id, plan_id, payment_id, mp_data.get("transaction_amount"))
-                        
-                        return {
-                            "status": "approved",
-                            "message": "Pagamento confirmado!",
-                            "redirect_to": "/dashboard"
-                        }
+                        # Check if barbershop was activated by webhook
+                        barbershop = await db.barbershops.find_one(
+                            {"barbershop_id": current_user.get("barbershop_id")},
+                            {"_id": 0}
+                        )
+                        if barbershop and barbershop.get("plan_status") == "active":
+                            return {
+                                "status": "approved",
+                                "message": "Pagamento confirmado!",
+                                "redirect_to": "/dashboard"
+                            }
+                        else:
+                            # Webhook hasn't processed yet - wait
+                            return {
+                                "status": "processing",
+                                "message": "Pagamento aprovado! Aguardando processamento..."
+                            }
                     
                     return {
                         "status": status,
