@@ -3790,12 +3790,8 @@ async def super_admin_cleanup_database(admin: dict = Depends(verify_super_admin)
 
 # ==================== MAIN APP SETUP ====================
 
-app.include_router(api_router)
-
-# Mount uploads directory for serving static files
-app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
-
-# CORS configuration - when using credentials, cannot use wildcard origins
+# CORS configuration - MUST be added BEFORE routes for preflight to work
+# When using credentials, cannot use wildcard origins
 cors_origins_env = os.environ.get('CORS_ORIGINS', '')
 if cors_origins_env and cors_origins_env != '*':
     allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
@@ -3815,6 +3811,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+app.include_router(api_router)
+
+# Mount uploads directory for serving static files
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 @app.on_event("startup")
 async def startup_event():
