@@ -101,11 +101,20 @@ export const AuthProvider = ({ children }) => {
     
     localStorage.setItem('token', token);
     setUser(userData);
-    setNeedsPayment(needs_payment || false);
     
-    if (userData.role === 'barber' && userData.barbershop_id) {
-      const barbershopRes = await api.get('/barbershops/me');
-      setBarbershop(barbershopRes.data);
+    // CRITICAL: Set needs_payment based on plan_status
+    if (userData.role === 'barber') {
+      if (userData.barbershop_id) {
+        const barbershopRes = await api.get('/barbershops/me');
+        setBarbershop(barbershopRes.data);
+        
+        // Only allow if plan_status is 'active'
+        setNeedsPayment(barbershopRes.data?.plan_status !== 'active');
+      } else {
+        setNeedsPayment(true);
+      }
+    } else {
+      setNeedsPayment(false);
     }
     
     return { user: userData, needs_payment };
