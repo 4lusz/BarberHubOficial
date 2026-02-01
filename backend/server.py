@@ -925,40 +925,56 @@ async def register(user_data: UserCreate):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin):
-    user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
-    
-    if not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
-    
-    token = create_jwt_token(user["user_id"], user["email"], user["role"])
-    
-    # Check if user needs to complete payment
-    needs_payment = False
-    plan_status = None
-    
-    if user["role"] == "barber":
-        if not user.get("barbershop_id"):
-            # No barbershop created yet
-            needs_payment = True
-        else:
-            # Check barbershop plan status
-            barbershop = await db.barbershops.find_one(
-                {"barbershop_id": user["barbershop_id"]},
-                {"_id": 0, "plan_status": 1}
-            )
-            plan_status = barbershop.get("plan_status") if barbershop else None
-            # Needs payment if status is pending, expired, or cancelled
-            if plan_status in ["pending", "expired", "cancelled"]:
+    try:
+        logger.info(f"Login attempt for email: {credentials.email}")
+        
+        user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+        if not user:
+            logger.warning(f"User not found: {credentials.email}")
+            raise HTTPException(status_code=401, detail="Credenciais inválidas")
+        
+        logger.info(f"User found, verifying password...")
+        
+        if not verify_password(credentials.password, user["password"]):
+            logger.warning(f"Invalid password for: {credentials.email}")
+            raise HTTPException(status_code=401, detail="Credenciais inválidas")
+        
+        logger.info(f"Password verified, creating token...")
+        
+        token = create_jwt_token(user["user_id"], user["email"], user["role"])
+        
+        # Check if user needs to complete payment
+        needs_payment = False
+        plan_status = None
+        
+        if user["role"] == "barber":
+            if not user.get("barbershop_id"):
+                # No barbershop created yet
                 needs_payment = True
-    
-    return {
-        "token": token,
-        "user": {k: v for k, v in user.items() if k != "password"},
-        "needs_payment": needs_payment,
-        "plan_status": plan_status
-    }
+            else:
+                # Check barbershop plan status
+                barbershop = await db.barbershops.find_one(
+                    {"barbershop_id": user["barbershop_id"]},
+                    {"_id": 0, "plan_status": 1}
+                )
+                plan_status = barbershop.get("plan_status") if barbershop else None
+                # Needs payment if status is pending, expired, or cancelled
+                if plan_status in ["pending", "expired", "cancelled"]:
+                    needs_payment = True
+        
+        logger.info(f"Login successful for: {credentials.email}, plan_status: {plan_status}")
+        
+        return {
+            "token": token,
+            "user": {k: v for k, v in user.items() if k != "password"},
+            "needs_payment": needs_payment,
+            "plan_status": plan_status
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error for {credentials.email}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @api_router.post("/auth/client/register")
 async def register_client(client_data: ClientRegister):
