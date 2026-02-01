@@ -151,10 +151,19 @@ export default function PaymentPage() {
       });
 
       if (paymentResponse.data.success) {
-        if (paymentResponse.data.payment_url) {
-          // Real payment - redirect to Mercado Pago
+        if (paymentResponse.data.payment_method === 'pix' && paymentResponse.data.pix_qr_code) {
+          // PIX payment - navigate to PIX page with QR code data
+          navigate('/pagamento/pix', { 
+            state: { 
+              pixData: paymentResponse.data,
+              plan: plan,
+              planId: planId
+            } 
+          });
+        } else if (paymentResponse.data.payment_url) {
+          // Card payment - redirect to Mercado Pago
           window.location.href = paymentResponse.data.payment_url;
-        } else {
+        } else if (paymentResponse.data.demo_mode) {
           // Demo mode - activate barbershop directly
           await api.post(`/barbershops/activate?plan_id=${planId}`);
           toast.success('Pagamento processado com sucesso!');
