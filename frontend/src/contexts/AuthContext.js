@@ -28,12 +28,23 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       setUser(response.data);
       
-      if (response.data.role === 'barber' && response.data.barbershop_id) {
-        const barbershopRes = await api.get('/barbershops/me');
-        setBarbershop(barbershopRes.data);
-        setNeedsPayment(false);
-      } else if (response.data.role === 'barber' && !response.data.barbershop_id) {
-        setNeedsPayment(true);
+      if (response.data.role === 'barber') {
+        if (response.data.barbershop_id) {
+          const barbershopRes = await api.get('/barbershops/me');
+          setBarbershop(barbershopRes.data);
+          
+          // CRITICAL: Only allow access if plan_status is 'active'
+          const planStatus = barbershopRes.data?.plan_status;
+          if (planStatus === 'active') {
+            setNeedsPayment(false);
+          } else {
+            // pending, expired, cancelled, or any other status = needs payment
+            setNeedsPayment(true);
+          }
+        } else {
+          // No barbershop at all
+          setNeedsPayment(true);
+        }
       }
     } catch (error) {
       localStorage.removeItem('token');
