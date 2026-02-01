@@ -2295,7 +2295,7 @@ async def get_public_barbershop(slug: str):
 # ==================== SERVICES ROUTES ====================
 
 @api_router.get("/services")
-async def get_services(current_user: dict = Depends(get_current_user)):
+async def get_services(current_user: dict = Depends(require_active_subscription)):
     if not current_user.get("barbershop_id"):
         return []
     
@@ -2306,7 +2306,7 @@ async def get_services(current_user: dict = Depends(get_current_user)):
     return services
 
 @api_router.post("/services")
-async def create_service(data: ServiceCreate, current_user: dict = Depends(get_current_user)):
+async def create_service(data: ServiceCreate, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2325,7 +2325,7 @@ async def create_service(data: ServiceCreate, current_user: dict = Depends(get_c
     return {k: v for k, v in service_doc.items() if k != "_id"}
 
 @api_router.put("/services/{service_id}")
-async def update_service(service_id: str, data: ServiceCreate, current_user: dict = Depends(get_current_user)):
+async def update_service(service_id: str, data: ServiceCreate, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
@@ -2346,7 +2346,7 @@ async def update_service(service_id: str, data: ServiceCreate, current_user: dic
     return service
 
 @api_router.delete("/services/{service_id}")
-async def delete_service(service_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_service(service_id: str, current_user: dict = Depends(require_active_subscription)):
     if current_user["role"] != "barber" or not current_user.get("barbershop_id"):
         raise HTTPException(status_code=403, detail="Acesso negado")
     
