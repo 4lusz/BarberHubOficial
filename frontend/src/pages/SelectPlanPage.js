@@ -89,7 +89,7 @@ export default function SelectPlanPage() {
             return (
               <Card
                 key={plan.id}
-                className={`cursor-pointer transition-all duration-300 ${
+                className={`cursor-pointer transition-all duration-300 relative ${
                   isSelected 
                     ? 'border-primary ring-2 ring-primary/20' 
                     : plan.highlight 
