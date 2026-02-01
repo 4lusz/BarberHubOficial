@@ -1025,12 +1025,28 @@ async def exchange_google_session(session_id: str, response: Response):
         max_age=7*24*60*60
     )
     
-    needs_payment = user["role"] == "barber" and not user.get("barbershop_id")
+    # CRITICAL: Check if user needs payment based on barbershop AND plan_status
+    needs_payment = True
+    plan_status = None
+    
+    if user["role"] == "barber":
+        if not user.get("barbershop_id"):
+            needs_payment = True
+        else:
+            barbershop = await db.barbershops.find_one(
+                {"barbershop_id": user["barbershop_id"]},
+                {"_id": 0, "plan_status": 1}
+            )
+            plan_status = barbershop.get("plan_status") if barbershop else None
+            needs_payment = plan_status != "active"
+    else:
+        needs_payment = False
     
     return {
         "user": {k: v for k, v in user.items() if k not in ["_id", "password"]},
         "token": create_jwt_token(user_id, user["email"], user["role"]),
-        "needs_payment": needs_payment
+        "needs_payment": needs_payment,
+        "plan_status": plan_status
     }
 
 @api_router.get("/auth/me")
