@@ -764,7 +764,7 @@ export default function PublicBookingPage() {
                         style={
                           booking.time === slot.time 
                             ? { backgroundColor: primaryColor, color: '#000' } 
-                            : { backgroundColor: 'rgba(0,0,0,0.3)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }
+                            : { backgroundColor: '#1f2937', borderColor: '#4b5563', color: '#fff' }
                         }
                         data-testid={`time-${slot.time}`}
                       >
