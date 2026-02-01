@@ -37,7 +37,9 @@ import {
   Loader2,
   LogOut,
   ExternalLink,
-  Settings
+  Settings,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
