@@ -189,6 +189,7 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState({});
   const [activeTab, setActiveTab] = useState('info');
+  const [showBannerAdjust, setShowBannerAdjust] = useState(false);
   const logoInputRef = useRef(null);
   const bannerInputRef = useRef(null);
   const galleryInputRef = useRef(null);
