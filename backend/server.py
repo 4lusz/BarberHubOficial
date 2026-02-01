@@ -1838,10 +1838,14 @@ async def handle_payment_notification(payment_id: str):
                 )
                 
                 if status == "approved" and external_ref:
+                    # external_reference format: user_XXXXX_planid_timestamp
+                    # We need to extract user_XXXXX and planid
                     parts = external_ref.split("_")
-                    if len(parts) >= 2:
-                        user_id = parts[0]
-                        plan_id = parts[1]
+                    if len(parts) >= 3:
+                        # user_id is "user_XXXXX" (first two parts joined)
+                        user_id = f"{parts[0]}_{parts[1]}"
+                        plan_id = parts[2]
+                        logger.info(f"Activating subscription for user_id={user_id}, plan_id={plan_id}")
                         await activate_subscription(user_id, plan_id, payment_id, payment_data.get("transaction_amount"))
                         
                         # Send WhatsApp confirmation for PIX payment
