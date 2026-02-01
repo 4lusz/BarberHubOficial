@@ -1737,8 +1737,36 @@ async def create_barbershop(data: BarbershopCreate, current_user: dict = Depends
     if current_user["role"] != "barber":
         raise HTTPException(status_code=403, detail="Acesso negado")
     
+    # Check if user already has a barbershop
     if current_user.get("barbershop_id"):
-        raise HTTPException(status_code=400, detail="Você já possui uma barbearia")
+        existing = await db.barbershops.find_one(
+            {"barbershop_id": current_user["barbershop_id"]},
+            {"_id": 0}
+        )
+        if existing:
+            # If subscription is NOT active, allow updating barbershop info and continue
+            if existing.get("plan_status") != "active":
+                # Update existing barbershop with new data
+                await db.barbershops.update_one(
+                    {"barbershop_id": current_user["barbershop_id"]},
+                    {"$set": {
+                        "name": data.name,
+                        "address": data.address,
+                        "phone": data.phone,
+                        "latitude": data.latitude,
+                        "longitude": data.longitude,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                # Return the updated barbershop
+                updated = await db.barbershops.find_one(
+                    {"barbershop_id": current_user["barbershop_id"]},
+                    {"_id": 0}
+                )
+                return updated
+            else:
+                # Active subscription - truly cannot create another
+                raise HTTPException(status_code=400, detail="Você já possui uma barbearia ativa")
     
     barbershop_id = generate_id("barb")
     base_slug = generate_slug(data.name)
