@@ -1615,6 +1615,72 @@ async def get_pending_subscription_status(current_user: dict = Depends(get_curre
         "can_restart": barbershop.get("plan_status") in ["pending", "cancelled", "expired"]
     }
 
+@api_router.get("/payment/pix-status/{payment_id}")
+async def check_pix_status(payment_id: str, current_user: dict = Depends(get_current_user)):
+    """Check PIX payment status - used for polling"""
+    try:
+        # First check local database
+        payment = await db.payments.find_one(
+            {"mp_payment_id": str(payment_id), "user_id": current_user["user_id"]},
+            {"_id": 0}
+        )
+        
+        if payment and payment.get("status") == "approved":
+            return {
+                "status": "approved",
+                "message": "Pagamento confirmado!",
+                "redirect_to": "/dashboard"
+            }
+        
+        # Check with Mercado Pago API
+        if MERCADOPAGO_ACCESS_TOKEN:
+            async with httpx.AsyncClient() as client_http:
+                resp = await client_http.get(
+                    f"https://api.mercadopago.com/v1/payments/{payment_id}",
+                    headers={"Authorization": f"Bearer {MERCADOPAGO_ACCESS_TOKEN}"}
+                )
+                
+                if resp.status_code == 200:
+                    mp_data = resp.json()
+                    status = mp_data.get("status")
+                    
+                    # Update local record
+                    if payment:
+                        await db.payments.update_one(
+                            {"mp_payment_id": str(payment_id)},
+                            {"$set": {"status": status}}
+                        )
+                    
+                    if status == "approved":
+                        # Process approval if not already done
+                        external_ref = mp_data.get("external_reference", "")
+                        if external_ref:
+                            parts = external_ref.split("_")
+                            if len(parts) >= 2:
+                                user_id = parts[0]
+                                plan_id = parts[1]
+                                await activate_subscription(user_id, plan_id, payment_id, mp_data.get("transaction_amount"))
+                        
+                        return {
+                            "status": "approved",
+                            "message": "Pagamento confirmado!",
+                            "redirect_to": "/dashboard"
+                        }
+                    
+                    return {
+                        "status": status,
+                        "message": "Aguardando pagamento..."
+                    }
+        
+        return {
+            "status": payment.get("status", "pending") if payment else "pending",
+            "message": "Aguardando pagamento..."
+        }
+        
+    except Exception as e:
+        logger.error(f"PIX status check error: {str(e)}")
+        return {"status": "error", "message": "Erro ao verificar status"}
+
 @api_router.post("/webhooks/mercadopago")
 async def mercadopago_webhook(request: Request):
     """Handle Mercado Pago payment and subscription notifications"""
