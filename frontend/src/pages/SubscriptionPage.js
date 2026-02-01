@@ -266,48 +266,49 @@ export default function SubscriptionPage() {
         </Card>
       )}
 
-      {/* Cancel Section */}
-      <Card className="border-border">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            Ações da Assinatura
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!showCancelConfirm ? (
-            <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
-              <div>
-                <p className="font-medium">Cancelar Assinatura</p>
-                <p className="text-sm text-muted-foreground">
-                  Você perderá o acesso ao dashboard e funcionalidades
-                </p>
-              </div>
-              <Button 
-                variant="outline" 
-                className="text-red-500 border-red-500/50 hover:bg-red-500/10"
-                onClick={() => setShowCancelConfirm(true)}
-                data-testid="cancel-button"
-              >
-                Cancelar Plano
-              </Button>
-            </div>
-          ) : (
-            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg space-y-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+      {/* Cancel Section - Only show if not already cancelled */}
+      {!isCancelled && (
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="font-heading text-lg uppercase flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Ações da Assinatura
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!showCancelConfirm ? (
+              <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
                 <div>
-                  <p className="font-medium text-red-500">Confirmar Cancelamento</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Tem certeza que deseja cancelar sua assinatura? Você perderá o acesso ao dashboard 
-                    e todas as funcionalidades imediatamente.
+                  <p className="font-medium">Cancelar Renovação Automática</p>
+                  <p className="text-sm text-muted-foreground">
+                    Você continuará com acesso até o fim do período pago
                   </p>
                 </div>
-              </div>
-              <div className="flex gap-3 justify-end">
                 <Button 
                   variant="outline" 
-                  onClick={() => setShowCancelConfirm(false)}
+                  className="text-red-500 border-red-500/50 hover:bg-red-500/10"
+                  onClick={() => setShowCancelConfirm(true)}
+                  data-testid="cancel-button"
+                >
+                  Cancelar Plano
+                </Button>
+              </div>
+            ) : (
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg space-y-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-red-500">Confirmar Cancelamento</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Tem certeza que deseja cancelar a renovação automática? 
+                      Você continuará com acesso até {formatDate(barbershop?.plan_expires_at)}.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowCancelConfirm(false)}
                   data-testid="cancel-back-button"
                 >
                   Voltar
