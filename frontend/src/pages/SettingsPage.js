@@ -243,6 +243,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleBannerAdjustSave = async (zoom, offsetY) => {
+    try {
+      const response = await api.put('/barbershops', { 
+        banner_zoom: zoom,
+        banner_offset_y: offsetY 
+      });
+      updateBarbershop(response.data);
+      toast.success('Ajuste do banner salvo!');
+    } catch (error) {
+      toast.error('Erro ao salvar ajuste');
+    }
+  };
+
   const handleUpload = async (type, file) => {
     if (!file) return;
     
