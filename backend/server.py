@@ -57,7 +57,9 @@ MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 # Twilio Config (WhatsApp API)
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
-TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER', '')
+# Clean the WhatsApp number - remove any spaces that might be in the env variable
+_raw_whatsapp_number = os.environ.get('TWILIO_WHATSAPP_NUMBER', '')
+TWILIO_WHATSAPP_NUMBER = _raw_whatsapp_number.replace(' ', '').strip() if _raw_whatsapp_number else ''
 # Note: Messaging Service not used - direct WhatsApp sender is used instead
 
 # Super Admin Config
@@ -68,6 +70,12 @@ scheduler = AsyncIOScheduler()
 
 # Create the main app
 app = FastAPI(title="BarberHub API")
+
+# Root health check endpoint (for Kubernetes probes)
+@app.get("/health")
+async def root_health_check():
+    """Health check endpoint for Kubernetes"""
+    return {"status": "healthy"}
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
