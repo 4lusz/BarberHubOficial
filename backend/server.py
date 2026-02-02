@@ -643,35 +643,51 @@ async def send_whatsapp_message(phone: str, message: str):
     try:
         formatted_phone = format_phone_for_whatsapp(phone)
         
+        # Validate and build WhatsApp addresses with mandatory whatsapp: prefix
+        from_number = TWILIO_WHATSAPP_NUMBER.replace(' ', '').strip()
+        if not from_number.startswith('+'):
+            from_number = f"+{from_number}"
+        from_whatsapp = f"whatsapp:{from_number}"
+        
+        # Build destination with whatsapp: prefix
+        to_number = formatted_phone
+        if not to_number.startswith('+'):
+            to_number = f"+{to_number}"
+        to_whatsapp = f"whatsapp:{to_number}"
+        
+        # Validate both addresses have whatsapp: prefix
+        if not from_whatsapp.startswith("whatsapp:+") or not to_whatsapp.startswith("whatsapp:+"):
+            logger.error(f"Invalid WhatsApp format: from={from_whatsapp}, to={to_whatsapp}")
+            return None
+        
         def send_message():
             client = get_twilio_client()
             if not client:
                 return None
             
-            from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
-            to_whatsapp = f"whatsapp:+{formatted_phone}"
-            
-            logger.info(f"Sending WhatsApp: from={from_whatsapp}, to={to_whatsapp}")
+            logger.info(f"[TWILIO] Sending message: FROM={from_whatsapp} TO={to_whatsapp}")
             
             msg = client.messages.create(
                 body=message,
                 from_=from_whatsapp,
                 to=to_whatsapp
             )
+            
+            logger.info(f"[TWILIO] Response SID={msg.sid} STATUS={msg.status}")
             return msg.sid
         
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, send_message)
         
         if result:
-            logger.info(f"WhatsApp sent to {phone}, SID: {result}")
+            logger.info(f"[TWILIO SUCCESS] WhatsApp sent to {to_whatsapp}, SID: {result}")
             return result
         else:
-            logger.error("Twilio client not available")
+            logger.error("[TWILIO ERROR] Twilio client not available")
             return None
             
     except Exception as e:
-        logger.error(f"Twilio failed: {str(e)}")
+        logger.error(f"[TWILIO EXCEPTION] Failed: {str(e)}")
         return None
 
 async def send_whatsapp_template(phone: str, content_sid: str, content_variables: dict):
