@@ -623,49 +623,40 @@ TWILIO_TEMPLATE_RENEWAL_REMINDER = os.environ.get('TWILIO_TEMPLATE_RENEWAL_REMIN
 TWILIO_TEMPLATE_VIP_WELCOME = os.environ.get('TWILIO_TEMPLATE_VIP_WELCOME', '')
 
 async def send_whatsapp_message(phone: str, message: str):
-    """Send WhatsApp message via Twilio API - DEPRECATED, use send_whatsapp_template instead"""
+    """Send WhatsApp message via Twilio API using direct from number (no Messaging Service)"""
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
         logger.warning("Twilio not configured, skipping WhatsApp")
         return None
     
-    if not TWILIO_MESSAGING_SERVICE_SID and not TWILIO_WHATSAPP_NUMBER:
-        logger.warning("Neither TWILIO_MESSAGING_SERVICE_SID nor TWILIO_WHATSAPP_NUMBER configured")
+    if not TWILIO_WHATSAPP_NUMBER:
+        logger.warning("TWILIO_WHATSAPP_NUMBER not configured")
         return None
     
     try:
         formatted_phone = format_phone_for_whatsapp(phone)
         
-        # Run Twilio in thread pool to avoid blocking
         def send_message():
             client = get_twilio_client()
             if not client:
                 return None
             
+            from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
             to_whatsapp = f"whatsapp:+{formatted_phone}"
             
-            # Prefer messaging_service_sid over from number
-            if TWILIO_MESSAGING_SERVICE_SID:
-                msg = client.messages.create(
-                    body=message,
-                    messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
-                    to=to_whatsapp
-                )
-            else:
-                # Fallback to from number
-                from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
-                msg = client.messages.create(
-                    body=message,
-                    from_=from_whatsapp,
-                    to=to_whatsapp
-                )
+            logger.info(f"Sending WhatsApp: from={from_whatsapp}, to={to_whatsapp}")
+            
+            msg = client.messages.create(
+                body=message,
+                from_=from_whatsapp,
+                to=to_whatsapp
+            )
             return msg.sid
         
-        # Execute in thread pool
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, send_message)
         
         if result:
-            logger.info(f"WhatsApp sent via Twilio to {phone}, SID: {result}")
+            logger.info(f"WhatsApp sent to {phone}, SID: {result}")
             return result
         else:
             logger.error("Twilio client not available")
@@ -676,7 +667,7 @@ async def send_whatsapp_message(phone: str, message: str):
         return None
 
 async def send_whatsapp_template(phone: str, content_sid: str, content_variables: dict):
-    """Send WhatsApp message via Twilio using approved templates"""
+    """Send WhatsApp message via Twilio using approved templates (direct from, no Messaging Service)"""
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
         logger.warning("Twilio not configured, skipping WhatsApp")
         return None
