@@ -672,8 +672,8 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
         logger.warning("Twilio not configured, skipping WhatsApp")
         return None
     
-    if not TWILIO_MESSAGING_SERVICE_SID:
-        logger.warning("TWILIO_MESSAGING_SERVICE_SID not configured for templates")
+    if not TWILIO_WHATSAPP_NUMBER:
+        logger.warning("TWILIO_WHATSAPP_NUMBER not configured for templates")
         return None
     
     if not content_sid:
@@ -682,7 +682,6 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
     
     try:
         formatted_phone = format_phone_for_whatsapp(phone)
-        logger.info(f"Sending WhatsApp template to {formatted_phone}, content_sid={content_sid[:20]}...")
         
         def send_template():
             client = get_twilio_client()
@@ -690,16 +689,17 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
                 logger.error("Twilio client is None")
                 return None
             
+            from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
             to_whatsapp = f"whatsapp:+{formatted_phone}"
             
             # Convert variables dict to JSON string
             import json
             variables_json = json.dumps(content_variables)
             
-            logger.info(f"Twilio call: to={to_whatsapp}, variables={variables_json}")
+            logger.info(f"Twilio template call: from={from_whatsapp}, to={to_whatsapp}, content_sid={content_sid[:20]}...")
             
             msg = client.messages.create(
-                messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID,
+                from_=from_whatsapp,
                 to=to_whatsapp,
                 content_sid=content_sid,
                 content_variables=variables_json
