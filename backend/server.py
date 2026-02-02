@@ -691,20 +691,35 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
     try:
         formatted_phone = format_phone_for_whatsapp(phone)
         
+        # Validate and build WhatsApp addresses with mandatory whatsapp: prefix
+        from_number = TWILIO_WHATSAPP_NUMBER.replace(' ', '').strip()
+        if not from_number.startswith('+'):
+            from_number = f"+{from_number}"
+        from_whatsapp = f"whatsapp:{from_number}"
+        
+        # Build destination with whatsapp: prefix
+        to_number = formatted_phone
+        if not to_number.startswith('+'):
+            to_number = f"+{to_number}"
+        to_whatsapp = f"whatsapp:{to_number}"
+        
+        # Validate both addresses have whatsapp: prefix
+        if not from_whatsapp.startswith("whatsapp:+") or not to_whatsapp.startswith("whatsapp:+"):
+            logger.error(f"Invalid WhatsApp format: from={from_whatsapp}, to={to_whatsapp}")
+            return None
+        
         def send_template():
             client = get_twilio_client()
             if not client:
                 logger.error("Twilio client is None")
                 return None
             
-            from_whatsapp = f"whatsapp:{TWILIO_WHATSAPP_NUMBER}"
-            to_whatsapp = f"whatsapp:+{formatted_phone}"
-            
             # Convert variables dict to JSON string
             import json
             variables_json = json.dumps(content_variables)
             
-            logger.info(f"Twilio template call: from={from_whatsapp}, to={to_whatsapp}, content_sid={content_sid[:20]}...")
+            logger.info(f"[TWILIO] Sending template: FROM={from_whatsapp} TO={to_whatsapp} CONTENT_SID={content_sid}")
+            logger.info(f"[TWILIO] Variables: {variables_json}")
             
             msg = client.messages.create(
                 from_=from_whatsapp,
@@ -712,20 +727,22 @@ async def send_whatsapp_template(phone: str, content_sid: str, content_variables
                 content_sid=content_sid,
                 content_variables=variables_json
             )
+            
+            logger.info(f"[TWILIO] Response SID={msg.sid} STATUS={msg.status}")
             return msg.sid
         
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, send_template)
         
         if result:
-            logger.info(f"WhatsApp template sent successfully to {phone}, SID: {result}")
+            logger.info(f"[TWILIO SUCCESS] WhatsApp template sent to {to_whatsapp}, SID: {result}")
             return result
         else:
-            logger.error("Twilio returned None - client not available")
+            logger.error("[TWILIO ERROR] Twilio returned None - client not available")
             return None
             
     except Exception as e:
-        logger.error(f"Twilio template failed for {phone}: {str(e)}")
+        logger.error(f"[TWILIO EXCEPTION] Failed for {phone}: {str(e)}")
         return None
 
 async def send_whatsapp_reminder(phone: str, barbershop_name: str, service_name: str, 
