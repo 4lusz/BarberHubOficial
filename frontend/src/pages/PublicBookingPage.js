@@ -346,27 +346,27 @@ export default function PublicBookingPage() {
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
-        <Card className="w-full max-w-md border-border text-center border-green-500/30 bg-green-500/5">
+        <Card className="w-full max-w-md text-center bg-zinc-900 border-green-500/30">
           <CardContent className="py-12">
             <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="text-2xl uppercase mb-2" style={{ fontFamily: fontStyle, color: primaryColor }}>
+            <h2 className="text-2xl uppercase mb-2 text-white" style={{ fontFamily: fontStyle }}>
               Agendamento Confirmado!
             </h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-gray-400 mb-6">
               Você receberá uma confirmação por WhatsApp.
             </p>
-            <div className="bg-secondary/50 rounded-lg p-4 text-left space-y-2 mb-6">
-              <p><strong>Serviço(s):</strong> {servicesText}</p>
-              <p><strong>Duração total:</strong> {totalDuration} min</p>
-              <p><strong>Data:</strong> {format(booking.date, "dd 'de' MMMM", { locale: ptBR })}</p>
-              <p><strong>Horário:</strong> {booking.time}</p>
+            <div className="bg-zinc-800 rounded-lg p-4 text-left space-y-2 mb-6 text-white">
+              <p><strong className="text-gray-300">Serviço(s):</strong> {servicesText}</p>
+              <p><strong className="text-gray-300">Duração total:</strong> {totalDuration} min</p>
+              <p><strong className="text-gray-300">Data:</strong> {format(booking.date, "dd 'de' MMMM", { locale: ptBR })}</p>
+              <p><strong className="text-gray-300">Horário:</strong> {booking.time}</p>
               {booking.professional && (
-                <p><strong>Profissional:</strong> {booking.professional.name}</p>
+                <p><strong className="text-gray-300">Profissional:</strong> {booking.professional.name}</p>
               )}
               {isVip && discountApplied > 0 ? (
-                <div className="pt-2 border-t border-gray-600">
+                <div className="pt-2 border-t border-zinc-700">
                   <p className="text-yellow-500 font-semibold flex items-center gap-1">
                     <Star className="w-4 h-4" fill="currentColor" /> Cliente VIP!
                   </p>
@@ -378,7 +378,7 @@ export default function PublicBookingPage() {
                   </p>
                 </div>
               ) : (
-                <p><strong>Valor:</strong> {formatCurrency(originalPrice)}</p>
+                <p><strong className="text-gray-300">Valor:</strong> <span style={{ color: primaryColor }}>{formatCurrency(originalPrice)}</span></p>
               )}
             </div>
             <Button 
@@ -397,7 +397,8 @@ export default function PublicBookingPage() {
                   clientEmail: '',
                 });
               }}
-              variant="outline"
+              className="w-full text-black font-semibold"
+              style={{ backgroundColor: primaryColor }}
               data-testid="new-booking-button"
             >
               Fazer outro agendamento
