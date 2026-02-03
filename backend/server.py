@@ -3075,7 +3075,8 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
             <p>Olá {data.client_name},</p>
             <p>Seu agendamento na <strong>{barbershop['name']}</strong> foi realizado com sucesso!</p>
             <div style="background: #18181B; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="color: #fff; margin: 5px 0;"><strong>Serviço:</strong> {service['name']}</p>
+                <p style="color: #fff; margin: 5px 0;"><strong>Serviço(s):</strong> {services_text}</p>
+                <p style="color: #fff; margin: 5px 0;"><strong>Duração total:</strong> {total_duration} min</p>
                 <p style="color: #fff; margin: 5px 0;"><strong>Data:</strong> {data.date}</p>
                 <p style="color: #fff; margin: 5px 0;"><strong>Horário:</strong> {data.time}</p>
                 {price_html}
@@ -3093,7 +3094,8 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     
     # Return appointment with barbershop location and VIP info
     apt_response = {k: v for k, v in apt_doc.items() if k != "_id"}
-    apt_response["service_name"] = service["name"]
+    apt_response["service_names"] = service_names
+    apt_response["services_text"] = services_text
     if barbershop:
         apt_response["barbershop_name"] = barbershop["name"]
         apt_response["barbershop_address"] = barbershop.get("address")
