@@ -1096,13 +1096,13 @@ async def login(credentials: UserLogin):
             logger.warning(f"User not found: {credentials.email}")
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
         
-        logger.info(f"User found, verifying password...")
+        logger.info("User found, verifying password...")
         
         if not verify_password(credentials.password, user["password"]):
             logger.warning(f"Invalid password for: {credentials.email}")
             raise HTTPException(status_code=401, detail="Credenciais inválidas")
         
-        logger.info(f"Password verified, creating token...")
+        logger.info("Password verified, creating token...")
         
         token = create_jwt_token(user["user_id"], user["email"], user["role"])
         
@@ -1347,7 +1347,7 @@ async def create_subscription(data: SubscriptionPayment, current_user: dict = De
                         "Content-Type": "application/json"
                     }
                 )
-            logger.info(f"Cancelled old MP subscription before creating new")
+            logger.info("Cancelled old MP subscription before creating new")
         except Exception as e:
             logger.warning(f"Could not cancel old MP subscription: {str(e)}")
     
