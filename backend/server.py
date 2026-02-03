@@ -3127,9 +3127,15 @@ async def update_appointment(
     if data.date:
         update_data["date"] = data.date
     if data.time:
-        service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
+        # Calculate total duration from all services
+        service_ids = apt.get("service_ids", [apt.get("service_id")] if apt.get("service_id") else [])
+        total_duration = 0
+        for sid in service_ids:
+            service = await db.services.find_one({"service_id": sid}, {"_id": 0})
+            if service:
+                total_duration += service["duration"]
         update_data["time"] = data.time
-        update_data["end_time"] = calculate_end_time(data.time, service["duration"])
+        update_data["end_time"] = calculate_end_time(data.time, total_duration)
     if data.notes is not None:
         update_data["notes"] = data.notes
     
