@@ -91,7 +91,7 @@ export default function PublicBookingPage() {
   const [showGallery, setShowGallery] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [booking, setBooking] = useState({
-    service: null,
+    services: [],  // Changed from service to services array
     professional: null,
     date: null,
     time: null,
@@ -113,6 +113,10 @@ export default function PublicBookingPage() {
   const bgColor = data?.barbershop?.background_color || '#09090B';
   const fontStyle = FONT_STYLES[data?.barbershop?.font_style] || FONT_STYLES.modern;
 
+  // Calculate totals from selected services
+  const totalPrice = booking.services.reduce((sum, s) => sum + s.price, 0);
+  const totalDuration = booking.services.reduce((sum, s) => sum + s.duration, 0);
+
   useEffect(() => {
     fetchBarbershop();
   }, [slug]);
@@ -129,19 +133,20 @@ export default function PublicBookingPage() {
   };
 
   useEffect(() => {
-    if (booking.date && booking.service) {
+    if (booking.date && booking.services.length > 0) {
       fetchAvailability();
     }
-  }, [booking.date, booking.service, booking.professional]);
+  }, [booking.date, booking.services, booking.professional]);
 
   const fetchAvailability = async () => {
-    if (!booking.date || !data?.barbershop) return;
+    if (!booking.date || !data?.barbershop || booking.services.length === 0) return;
     
     setLoadingSlots(true);
     try {
       const dateStr = format(booking.date, 'yyyy-MM-dd');
+      // Use the first service for availability check
       const response = await api.get(
-        `/appointments/availability/${data.barbershop.barbershop_id}?date=${dateStr}&service_id=${booking.service.service_id}${booking.professional ? `&professional_id=${booking.professional.professional_id}` : ''}`
+        `/appointments/availability/${data.barbershop.barbershop_id}?date=${dateStr}&service_id=${booking.services[0].service_id}${booking.professional ? `&professional_id=${booking.professional.professional_id}` : ''}`
       );
       setAvailableSlots(response.data.available_slots || []);
     } catch (error) {
@@ -151,8 +156,28 @@ export default function PublicBookingPage() {
     }
   };
 
-  const handleServiceSelect = (service) => {
-    setBooking({ ...booking, service, time: null });
+  const handleServiceToggle = (service) => {
+    const isSelected = booking.services.some(s => s.service_id === service.service_id);
+    if (isSelected) {
+      setBooking({ 
+        ...booking, 
+        services: booking.services.filter(s => s.service_id !== service.service_id),
+        time: null 
+      });
+    } else {
+      setBooking({ 
+        ...booking, 
+        services: [...booking.services, service],
+        time: null 
+      });
+    }
+  };
+
+  const handleContinueFromServices = () => {
+    if (booking.services.length === 0) {
+      toast.error('Selecione pelo menos um serviço');
+      return;
+    }
     if (data.professionals.length === 0) {
       setStep('datetime');
     } else {
