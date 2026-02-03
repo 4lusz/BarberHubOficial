@@ -38,6 +38,7 @@ SaaS de agendamento para barbearias, multi-tenant, moderno e escalável.
 - [x] Agenda visual
 - [x] **Desconto VIP automático**
 - [x] Confirmação via WhatsApp
+- [x] **Seleção de múltiplos serviços** - Cliente pode escolher mais de um serviço por agendamento (duração e preço são somados)
 
 ### Pagamentos - Mercado Pago (PRODUÇÃO)
 - [x] Planos Comum (R$49,90) e Premium (R$99,90)
