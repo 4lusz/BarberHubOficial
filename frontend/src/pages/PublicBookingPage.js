@@ -734,8 +734,12 @@ export default function PublicBookingPage() {
             <Button
               onClick={handleContinueFromServices}
               disabled={booking.services.length === 0}
-              className="w-full h-12 text-lg text-black"
-              style={{ backgroundColor: primaryColor }}
+              className={`w-full h-12 text-lg font-semibold transition-all ${
+                booking.services.length === 0 
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                  : 'text-black hover:opacity-90'
+              }`}
+              style={booking.services.length > 0 ? { backgroundColor: primaryColor } : {}}
               data-testid="continue-to-professional"
             >
               Continuar
