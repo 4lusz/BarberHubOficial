@@ -339,9 +339,10 @@ export default function PublicBookingPage() {
   // Success screen
   if (success) {
     const finalPrice = successData?.final_price || calculateFinalPrice();
-    const originalPrice = successData?.original_price || booking.service?.price || 0;
+    const originalPrice = successData?.original_price || totalPrice;
     const discountApplied = successData?.discount_percentage || (vipInfo.is_vip ? vipInfo.discount_percentage : 0);
     const isVip = successData?.is_vip || vipInfo.is_vip;
+    const servicesText = successData?.services_text || booking.services.map(s => s.name).join(', ');
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
@@ -357,7 +358,8 @@ export default function PublicBookingPage() {
               Você receberá uma confirmação por WhatsApp.
             </p>
             <div className="bg-secondary/50 rounded-lg p-4 text-left space-y-2 mb-6">
-              <p><strong>Serviço:</strong> {booking.service.name}</p>
+              <p><strong>Serviço(s):</strong> {servicesText}</p>
+              <p><strong>Duração total:</strong> {totalDuration} min</p>
               <p><strong>Data:</strong> {format(booking.date, "dd 'de' MMMM", { locale: ptBR })}</p>
               <p><strong>Horário:</strong> {booking.time}</p>
               {booking.professional && (
@@ -386,7 +388,7 @@ export default function PublicBookingPage() {
                 setVipInfo({ is_vip: false, discount_percentage: 0 });
                 setStep('service');
                 setBooking({
-                  service: null,
+                  services: [],
                   professional: null,
                   date: null,
                   time: null,
