@@ -272,7 +272,7 @@ class TimeBlock(BaseModel):
 
 class AppointmentCreate(BaseModel):
     barbershop_id: str
-    service_id: str
+    service_ids: List[str]  # Changed from service_id to service_ids for multiple services
     professional_id: Optional[str] = None
     date: str
     time: str
@@ -284,7 +284,7 @@ class AppointmentCreate(BaseModel):
 class Appointment(BaseModel):
     appointment_id: str
     barbershop_id: str
-    service_id: str
+    service_ids: List[str]  # Changed from service_id to service_ids
     professional_id: Optional[str] = None
     client_id: Optional[str] = None
     date: str
