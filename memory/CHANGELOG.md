@@ -1,29 +1,44 @@
 # BarberHub - Changelog
 
-## [2026-02-03] - Múltiplos Serviços e Meta Tag Facebook
+## [2026-02-03] - Melhorias Visuais e Verificação Meta
 
-### Implementado
-- **Meta tag de verificação de domínio Facebook** - Adicionada em `/app/frontend/public/index.html` para verificação do Meta Business
-- **Seleção de múltiplos serviços** - Cliente agora pode escolher mais de um serviço por agendamento
+### Verificação do Meta Business
+- **Meta tag de verificação Facebook** adicionada em `index.html`
+- **Página /sobre** criada com dados completos da empresa
+- **Footer com dados da empresa** adicionado em todas as páginas públicas:
+  - Razão Social: 64.876.912 ALUISIO MOURA PRADO
+  - CNPJ: 64.876.912/0001-90
+  - Endereço: Rua Palestina 1774, Jataí/GO - 75803-110
+  - Telefone: +55 64 99976-6685
 
-### Modificações Backend
-- Modelo `AppointmentCreate` agora usa `service_ids: List[str]` em vez de `service_id: str`
-- Modelo `Appointment` atualizado para armazenar `service_ids` (array)
-- Endpoint `/api/appointments` (POST) calcula automaticamente:
-  - Duração total (soma de todos os serviços)
-  - Preço total (soma de todos os serviços)
-- Compatibilidade retroativa mantida para agendamentos antigos com `service_id` único
+### Seleção de Múltiplos Serviços
+- Cliente pode selecionar mais de um serviço por agendamento
+- Resumo mostra quantidade de serviços, duração total e preço total
+- Backend atualizado para aceitar `service_ids` (array)
 
-### Modificações Frontend (`PublicBookingPage.js`)
-- Interface de seleção com checkboxes para múltiplos serviços
-- Resumo mostrando quantidade de serviços, duração e preço total
-- Botão "Continuar" só habilitado quando há pelo menos 1 serviço selecionado
-- Tela de sucesso atualizada para mostrar todos os serviços
+### Melhorias de UI/UX na Página de Agendamento
+- **Botão "Fazer outro agendamento"** agora sempre visível (fundo sólido, não outline)
+- **Botões de horário** com melhor contraste (fundo zinc-800, borda visível)
+- **Formulário de dados** com inputs maiores (h-12), mais espaçamento
+- **Card de resumo** redesenhado com ícone de calendário
+- **Botão de confirmação** maior (h-14) e mais impactante
+- **Botão de voltar** com hover state mais visível
+- **Indicador VIP** destacado com fundo amarelo translúcido
+- **Spinner de loading** customizado no botão de confirmação
+- **Animações** de hover nos cards de profissionais
+
+### Arquivos Criados
+- `/app/frontend/src/components/Footer.js` - Componente de rodapé reutilizável
+- `/app/frontend/src/pages/AboutPage.js` - Página Sobre
 
 ### Arquivos Modificados
-- `/app/frontend/public/index.html` - Meta tag Facebook
-- `/app/frontend/src/pages/PublicBookingPage.js` - Seleção múltipla
-- `/app/backend/server.py` - Models e endpoint de agendamento
+- `/app/frontend/src/pages/PublicBookingPage.js` - Melhorias visuais completas
+- `/app/frontend/src/pages/LandingPage.js` - Footer atualizado com dados da empresa
+- `/app/frontend/src/pages/TermsPage.js` - Footer atualizado
+- `/app/frontend/src/pages/PrivacyPage.js` - Footer atualizado
+- `/app/frontend/src/pages/FAQPage.js` - Footer atualizado
+- `/app/frontend/src/App.js` - Rota /sobre adicionada
+- `/app/backend/server.py` - Suporte a múltiplos serviços
 
 ---
 
