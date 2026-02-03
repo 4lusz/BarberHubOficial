@@ -2944,14 +2944,26 @@ async def get_availability(
 
 @api_router.post("/appointments")
 async def create_appointment(data: AppointmentCreate, current_user: dict = Depends(get_optional_user)):
-    service = await db.services.find_one({"service_id": data.service_id}, {"_id": 0})
-    if not service:
-        raise HTTPException(status_code=404, detail="Serviço não encontrado")
+    # Validate all services exist and calculate total duration/price
+    services = []
+    total_duration = 0
+    total_price = 0
+    service_names = []
     
-    end_time = calculate_end_time(data.time, service["duration"])
+    for service_id in data.service_ids:
+        service = await db.services.find_one({"service_id": service_id}, {"_id": 0})
+        if not service:
+            raise HTTPException(status_code=404, detail=f"Serviço não encontrado: {service_id}")
+        services.append(service)
+        total_duration += service["duration"]
+        total_price += service["price"]
+        service_names.append(service["name"])
     
+    end_time = calculate_end_time(data.time, total_duration)
+    
+    # Check availability using the first service (for slot calculation) but with total duration
     availability = await get_availability(
-        data.barbershop_id, data.date, data.service_id, data.professional_id
+        data.barbershop_id, data.date, data.service_ids[0], data.professional_id
     )
     
     slot_available = any(slot["time"] == data.time for slot in availability["available_slots"])
@@ -2966,7 +2978,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     normalized_phone = phone_result["normalized"] if phone_result["success"] else data.client_phone
     
     # Check if client is VIP and calculate discount
-    original_price = service["price"]
+    original_price = total_price
     final_price = original_price
     discount_percentage = 0
     is_vip = False
@@ -2990,7 +3002,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
     apt_doc = {
         "appointment_id": appointment_id,
         "barbershop_id": data.barbershop_id,
-        "service_id": data.service_id,
+        "service_ids": data.service_ids,  # Store all service IDs
         "professional_id": data.professional_id,
         "client_id": current_user["user_id"] if current_user else None,
         "date": data.date,
@@ -3006,10 +3018,14 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
         "final_price": final_price,
         "discount_percentage": discount_percentage,
         "is_vip": is_vip,
+        "total_duration": total_duration,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.appointments.insert_one(apt_doc)
+    
+    # Format services list for notifications
+    services_text = ", ".join(service_names)
     
     # Send WhatsApp confirmation
     if barbershop:
@@ -3019,7 +3035,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
                 phone=normalized_phone,
                 client_name=data.client_name,
                 barbershop_name=barbershop["name"],
-                service_name=service["name"],
+                service_name=services_text,  # Now shows all services
                 date=data.date,
                 time=data.time,
                 original_price=original_price,
