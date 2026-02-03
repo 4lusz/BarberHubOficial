@@ -862,29 +862,29 @@ export default function PublicBookingPage() {
 
         {/* Step: Client Info */}
         {step === 'info' && (
-          <div className="space-y-4 animate-fade-in">
+          <div className="space-y-5 animate-fade-in">
             <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
               Seus Dados
             </h2>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="clientPhone" className="text-white">WhatsApp * (com DDD)</Label>
+                <Label htmlFor="clientPhone" className="text-white font-medium">WhatsApp * (com DDD)</Label>
                 <PhoneInput
                   id="clientPhone"
-                  placeholder="(64) 99976-6685"
+                  placeholder="(64) 99999-9999"
                   value={booking.clientPhone}
                   onChange={handlePhoneChange}
                   onNormalized={handlePhoneNormalized}
                   required
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-zinc-800 border-zinc-700 text-white h-12 focus:border-amber-500 focus:ring-amber-500"
                   data-testid="client-phone-input"
                 />
                 {checkingVip && (
-                  <p className="text-xs text-gray-400">Verificando...</p>
+                  <p className="text-xs text-gray-400 animate-pulse">Verificando...</p>
                 )}
                 {vipInfo.is_vip && (
-                  <div className="flex items-center gap-2 text-yellow-500 text-sm">
+                  <div className="flex items-center gap-2 text-yellow-500 text-sm bg-yellow-500/10 p-2 rounded-lg">
                     <Star className="w-4 h-4" fill="currentColor" />
                     <span>Cliente VIP! Você tem {vipInfo.discount_percentage}% de desconto.</span>
                   </div>
