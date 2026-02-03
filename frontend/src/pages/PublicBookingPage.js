@@ -756,18 +756,19 @@ export default function PublicBookingPage() {
             <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
               Escolha o Profissional
             </h2>
+            <p className="text-gray-400 text-sm">Selecione quem vai te atender</p>
             <div className="grid gap-3">
               <button
                 onClick={() => handleProfessionalSelect(null)}
-                className="w-full p-4 rounded-lg border border-gray-700 hover:border-opacity-50 text-left transition-all bg-gray-800/50 hover:bg-gray-800"
+                className="w-full p-4 rounded-xl border border-zinc-700 hover:border-zinc-500 text-left transition-all bg-zinc-800/50 hover:bg-zinc-800 group"
                 data-testid="professional-any"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${primaryColor}20` }}>
-                    <User className="w-6 h-6" style={{ color: primaryColor }} />
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ backgroundColor: `${primaryColor}20` }}>
+                    <User className="w-7 h-7" style={{ color: primaryColor }} />
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">Sem preferência</h3>
+                    <h3 className="font-semibold text-white">Sem preferência</h3>
                     <p className="text-sm text-gray-400">Qualquer profissional disponível</p>
                   </div>
                 </div>
@@ -776,15 +777,15 @@ export default function PublicBookingPage() {
                 <button
                   key={prof.professional_id}
                   onClick={() => handleProfessionalSelect(prof)}
-                  className="w-full p-4 rounded-lg border border-gray-700 hover:border-opacity-50 text-left transition-all bg-gray-800/50 hover:bg-gray-800"
+                  className="w-full p-4 rounded-xl border border-zinc-700 hover:border-zinc-500 text-left transition-all bg-zinc-800/50 hover:bg-zinc-800 group"
                   data-testid={`professional-${prof.professional_id}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${primaryColor}20` }}>
-                      <User className="w-6 h-6" style={{ color: primaryColor }} />
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ backgroundColor: `${primaryColor}20` }}>
+                      <User className="w-7 h-7" style={{ color: primaryColor }} />
                     </div>
                     <div>
-                      <h3 className="font-medium text-white">{prof.name}</h3>
+                      <h3 className="font-semibold text-white">{prof.name}</h3>
                       {prof.specialty && (
                         <p className="text-sm text-gray-400">{prof.specialty}</p>
                       )}
@@ -802,8 +803,9 @@ export default function PublicBookingPage() {
             <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
               Data e Horário
             </h2>
+            <p className="text-gray-400 text-sm">Escolha quando você quer ser atendido</p>
             
-            <Card className="border-gray-700 bg-gray-800/50">
+            <Card className="border-zinc-700 bg-zinc-800/50 overflow-hidden">
               <CardContent className="py-4">
                 <Calendar
                   mode="single"
@@ -811,7 +813,7 @@ export default function PublicBookingPage() {
                   onSelect={handleDateSelect}
                   disabled={(date) => isBefore(date, startOfToday())}
                   locale={ptBR}
-                  className="rounded-md"
+                  className="rounded-md mx-auto"
                 />
               </CardContent>
             </Card>
