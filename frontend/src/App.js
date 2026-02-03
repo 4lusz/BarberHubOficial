@@ -110,6 +110,7 @@ function AppRouter() {
       <Route path="/termos" element={<TermsPage />} />
       <Route path="/privacidade" element={<PrivacyPage />} />
       <Route path="/faq" element={<FAQPage />} />
+      <Route path="/sobre" element={<AboutPage />} />
       
       {/* Payment Flow Routes */}
       <Route
