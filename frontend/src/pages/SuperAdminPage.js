@@ -430,15 +430,15 @@ export default function SuperAdminPage() {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Mercado Pago</span>
-                    {dashboard.integrations.mercadopago.configured ? (
+                    {dashboard.integrations?.mercadopago?.configured ? (
                       <Badge className="bg-green-500/20 text-green-500">Produção</Badge>
                     ) : (
                       <Badge variant="destructive">Não configurado</Badge>
                     )}
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">WhatsApp</span>
-                    {dashboard.integrations.whatsapp_respondio.configured ? (
+                    <span className="text-muted-foreground">WhatsApp (Twilio)</span>
+                    {dashboard.integrations?.whatsapp?.configured || dashboard.integrations?.whatsapp_respondio?.configured ? (
                       <Badge className="bg-green-500/20 text-green-500">Configurado</Badge>
                     ) : (
                       <Badge variant="outline">Parcial</Badge>
@@ -446,7 +446,7 @@ export default function SuperAdminPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Email (Resend)</span>
-                    {dashboard.integrations.email_resend.configured ? (
+                    {dashboard.integrations?.email_resend?.configured ? (
                       <Badge className="bg-green-500/20 text-green-500">Ativo</Badge>
                     ) : (
                       <Badge variant="destructive">Não configurado</Badge>
