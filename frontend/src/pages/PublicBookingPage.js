@@ -663,37 +663,82 @@ export default function PublicBookingPage() {
         {step === 'service' && (
           <div className="space-y-4 animate-fade-in">
             <h2 className="text-2xl uppercase text-white" style={{ fontFamily: fontStyle }}>
-              Escolha o Serviço
+              Escolha os Serviços
             </h2>
+            <p className="text-gray-400 text-sm">Selecione um ou mais serviços</p>
             <div className="grid gap-3">
-              {data.services.map((service) => (
-                <button
-                  key={service.service_id}
-                  onClick={() => handleServiceSelect(service)}
-                  className="w-full p-4 rounded-lg border border-gray-700 hover:border-opacity-50 text-left transition-all bg-gray-800/50 hover:bg-gray-800"
-                  style={{ '--hover-border': primaryColor }}
-                  data-testid={`service-${service.service_id}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium text-white">{service.name}</h3>
-                      {service.description && (
-                        <p className="text-sm text-gray-400 mt-1">{service.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {service.duration} min
-                        </span>
+              {data.services.map((service) => {
+                const isSelected = booking.services.some(s => s.service_id === service.service_id);
+                return (
+                  <button
+                    key={service.service_id}
+                    onClick={() => handleServiceToggle(service)}
+                    className={`w-full p-4 rounded-lg border text-left transition-all ${
+                      isSelected 
+                        ? 'border-2 bg-gray-800' 
+                        : 'border-gray-700 hover:border-opacity-50 bg-gray-800/50 hover:bg-gray-800'
+                    }`}
+                    style={isSelected ? { borderColor: primaryColor } : {}}
+                    data-testid={`service-${service.service_id}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-start gap-3">
+                        <div 
+                          className={`w-6 h-6 rounded-md border-2 flex items-center justify-center mt-0.5 transition-colors ${
+                            isSelected ? 'border-transparent' : 'border-gray-600'
+                          }`}
+                          style={isSelected ? { backgroundColor: primaryColor } : {}}
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-black" />}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">{service.name}</h3>
+                          {service.description && (
+                            <p className="text-sm text-gray-400 mt-1">{service.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {service.duration} min
+                            </span>
+                          </div>
+                        </div>
                       </div>
+                      <span className="font-bold text-lg" style={{ color: primaryColor }}>
+                        {formatCurrency(service.price)}
+                      </span>
                     </div>
-                    <span className="font-bold text-lg" style={{ color: primaryColor }}>
-                      {formatCurrency(service.price)}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Selected Services Summary */}
+            {booking.services.length > 0 && (
+              <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/30">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-400">{booking.services.length} serviço(s) selecionado(s)</span>
+                  <span className="text-white font-semibold">Duração: {totalDuration} min</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Total:</span>
+                  <span className="text-xl font-bold" style={{ color: primaryColor }}>
+                    {formatCurrency(totalPrice)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Continue Button */}
+            <Button
+              onClick={handleContinueFromServices}
+              disabled={booking.services.length === 0}
+              className="w-full h-12 text-lg text-black"
+              style={{ backgroundColor: primaryColor }}
+              data-testid="continue-to-professional"
+            >
+              Continuar
+            </Button>
           </div>
         )}
 
