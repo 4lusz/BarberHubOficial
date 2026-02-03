@@ -1006,9 +1006,10 @@ export default function PublicBookingPage() {
           href={`https://wa.me/${data.barbershop.whatsapp_number.replace(/\D/g, '')}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 p-4 rounded-full shadow-lg z-40 text-black"
+          className="fixed bottom-6 right-6 p-4 rounded-full shadow-xl z-40 text-black transition-all hover:scale-110 active:scale-95"
           style={{ backgroundColor: primaryColor }}
           data-testid="whatsapp-float-button"
+          title="Falar pelo WhatsApp"
         >
           <MessageCircle className="w-6 h-6" />
         </a>
