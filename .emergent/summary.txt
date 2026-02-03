@@ -15,57 +15,73 @@ O usuário solicitou a criação de um SaaS de agendamento completo para barbear
 **User's preferred language**: Português (Brasil)
 
 **what currently exists?**
-Um aplicativo full-stack (React + FastAPI) que passou por uma série de correções críticas. Foram resolvidos problemas de deploy com o MongoDB, erros de CORS, bugs de hash de senha e múltiplas vulnerabilidades de segurança que permitiam acesso indevido ao sistema sem pagamento confirmado. O fluxo de pagamento foi refeito para separar PIX (pagamento avulso) de Cartão de Crédito (recorrência) e o backend foi fortalecido para que apenas o webhook do Mercado Pago possa ativar uma assinatura. O frontend foi modificado para usar um sistema de polling (verificação contínua) que aguarda a confirmação do pagamento antes de liberar o acesso ao dashboard.
+Um aplicativo full-stack (React + FastAPI + MongoDB) com funcionalidades de cadastro, pagamento (Mercado Pago), agendamento e personalização. Foram implementadas diversas correções críticas de segurança no fluxo de pagamento, que agora depende exclusivamente de webhooks para ativação de planos. A integração com o WhatsApp via Twilio foi totalmente refeita para usar templates aprovados, e uma funcionalidade de ajuste de banner (zoom/posição) foi adicionada. Também foi criado um painel de Super Admin para gerenciamento da plataforma. Recentemente, foram criados dois documentos importantes: uma documentação técnica completa e um guia do usuário.
 
 **Last working item**:
--   **Last item agent was working:** Corrigindo uma falha de segurança CRÍTICA onde o frontend ativava a assinatura e liberava o acesso ao dashboard imediatamente após o início de um pagamento (PIX ou Cartão), sem aguardar a confirmação real do pagamento via webhook. O agente reescreveu as páginas  e  para, em vez de ativar o plano, apenas exibir uma tela de aguardando confirmação e verificar o status do pagamento continuamente (polling) junto ao backend. O acesso só é liberado quando o backend confirma que o webhook já processou o pagamento e ativou o plano.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. É crucial testar o fluxo de pagamento de ponta a ponta para PIX e Cartão, garantindo que o usuário NUNCA seja redirecionado para o dashboard antes da confirmação do pagamento. O teste deve validar que o usuário permanece na tela de aguardando até que o status do plano mude para 'active' no backend.
+-   **Last item agent was working:** O agente diagnosticou a causa final das falhas no envio de mensagens do WhatsApp. Após corrigir o código para usar templates e o número de remetente correto, o erro  persistiu. A investigação concluiu que a conta WABA (WhatsApp Business Account) do usuário no Meta está restrita/banida, o que impede qualquer envio.
+-   **Status:** BLOCKED
+-   **Agent Testing Done:** Y
+-   **Which testing method agent to use?** Manual testing by curl/python -c. Após o usuário fornecer as novas credenciais do WhatsApp (de uma nova conta WABA não-banida), o próximo agente deve atualizar a variável de ambiente  e executar um teste de agendamento para validar que a notificação é enviada e recebida.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Corrigir e validar o novo fluxo de pagamento seguro (P0 - BLOCKER)**
-    -   **Attempted fixes:** O agente reescreveu  e  para usar um mecanismo de polling seguro, que espera a confirmação do backend (que por sua vez espera o webhook) antes de redirecionar para o dashboard.
+-   **Issue 1: Integração com WhatsApp não funcional devido a conta banida (P0 - BLOCKER)**
+    -   **Attempted fixes:** O código foi totalmente refeito para: 1) usar templates aprovados via  em vez de texto livre; 2) remover o uso de  que estava bloqueado; 3) usar o número de remetente correto (). Os testes confirmaram que o código está correto, mas o envio falha na API do Twilio com o erro 63112, que foi diagnosticado como uma conta WABA restrita.
     -   **Next debug checklist:**
-        1.  Revisar o código em  e  para garantir que a lógica de polling está correta e segura.
-        2.  Corrigir quaisquer erros de lint, como o que foi ignorado em , pois podem indicar problemas lógicos.
-        3.  Realizar um teste completo do fluxo: criar conta > escolher plano > iniciar pagamento (PIX e Cartão em testes separados) > verificar que a tela Aguardando confirmação é exibida > simular a confirmação do pagamento (via webhook) > verificar que SÓ ENTÃO o frontend redireciona para o dashboard.
-    -   **Why fix this issue and what will be achieved with the fix?** Esta é a vulnerabilidade mais crítica do sistema, pois permite acesso a um serviço pago sem pagar. A correção garante a integridade financeira e de segurança do negócio.
-    -   **Status:** IN PROGRESS
+        1.  Aguardar o usuário criar uma nova empresa no Meta, uma nova conta WABA e um novo WhatsApp Sender no Twilio.
+        2.  Obter o novo número do  com o usuário.
+        3.  Pode ser necessário obter novos  para os templates, caso eles precisem ser recriados na nova conta.
+        4.  Atualizar as variáveis de ambiente no arquivo .
+        5.  Realizar um teste de agendamento para confirmar o envio da notificação.
+    -   **Why fix this issue and what will be achieved with the fix?** É uma funcionalidade central do produto, essencial para a comunicação com os clientes (confirmações e lembretes de agendamento).
+    -   **Status:** BLOCKED
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both. O frontend para validar a experiência do usuário e o backend para garantir que os endpoints de status são seguros.
-    -   **Blocked on other issue:** None
+    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Blocked on other issue:** N/A
 
 **In progress Task List**:
 -   Nenhum.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks (Pós-correção):**
-    -   (P0) O usuário precisará testar a aplicação em produção, focando no fluxo de criação de conta e pagamento.
-    -   (P0) O usuário precisará configurar o Webhook do Mercado Pago no painel do MP para o ambiente de produção.
-    -   (P0) O usuário precisará verificar a conta do Meta Business para ativar as notificações do WhatsApp.
+-   **Upcoming Tasks (P0):**
+    -   Configurar as novas credenciais do Twilio/WhatsApp quando o usuário as fornecer.
+    -   Testar o fluxo de ponta a ponta em um ambiente de produção após o deploy.
+
 -   **Future Tasks:**
     -   (P1) Implementar um programa de fidelidade.
     -   (P1) Aprimorar a página de Relatórios com mais gráficos e métricas.
     -   (P2) Permitir que o cliente escolha o profissional pelo seu perfil.
     -   (P2) Adicionar links de redes sociais ao rodapé.
+    -   (P2) Migrar o armazenamento de imagens (logos, banners) para um serviço de cloud (ex: S3) para garantir persistência entre deploys.
+    -   (P2) Refatorar o arquivo monolítico  para uma arquitetura modular.
 
 **Completed work in this session**
--   **Correção Crítica de Deploy:** Resolvido erro de autorização do MongoDB () no ambiente de produção.
--   **Correção de CORS:** Ajustada a configuração do middleware CORS no backend para permitir credenciais e tratar requisições preflight corretamente.
--   **Correção de Autenticação:** Migrado o sistema de hash de senhas para  para corrigir um bug que impedia o login.
--   **Remoção de Vulnerabilidade de Ativação:** Removido um endpoint de modo demo () e lógicas no frontend que permitiam ativar planos sem pagamento.
--   **Fortalecimento do Backend:** Implementada uma dependência () que protege todas as rotas sensíveis, garantindo que apenas usuários com assinatura ativa possam executar ações.
--   **Melhora no Fluxo de Pagamento:** O fluxo de PIX foi separado para gerar um QR Code diretamente, sem a tela intermediária do Mercado Pago.
--   **Correção do Fluxo de Cancelamento:** Ajustado para que, ao cancelar, o usuário mantenha o acesso até a data de expiração do plano, em vez de ser bloqueado imediatamente.
--   **Ajustes de UX e Branding:** Removido o branding da Emergent, o botão de demonstração e adicionados avisos sobre os tipos de pagamento (PIX vs. Cartão).
+-   **Segurança do Pagamento PIX:** Verificado com o  que o fluxo é seguro e depende apenas do webhook, eliminando vulnerabilidades.
+-   **Correção do Webhook do Mercado Pago:** Ajustado o parser de  para processar o  corretamente.
+-   **Painel Super Admin:** Adicionada a funcionalidade para excluir barbearias.
+-   **Correção de Autenticação (Login e Super Admin):** Resolvidos erros 502 (Bad Gateway) no login, atualizando a versão do , e erros 403 (Forbidden) no Super Admin, padronizando o .
+-   **Melhorias de UI/UX:**
+    -   Corrigido problema de contraste de cores nos botões de horário na página pública.
+    -   Implementado um modal para ajuste de banner com controles de zoom e posição vertical.
+-   **Integração com WhatsApp (Twilio):**
+    -   Código totalmente refeito para usar templates aprovados via .
+    -   Removida a dependência do  que estava causando um bloqueio.
+    -   Identificado e corrigido o número de remetente incorreto.
+    -   Diagnosticado o bloqueio final como uma restrição na conta WABA do usuário.
+-   **Correções para Deploy:**
+    -   Adicionado tratamento para remover espaços em branco da variável .
+    -   Adicionado endpoint  na raiz para health checks do Kubernetes.
+    -   Configurado  para  para evitar problemas de CORS no deploy.
+-   **Criação de Documentação:**
+    -   : Documentação técnica completa da aplicação.
+    -   : Guia amigável para donos de barbearia e seus clientes.
 
 **Earlier issues found/mentioned but not fixed**
--   O arquivo  é um monolito e representa um débito técnico. Uma futura refatoração para uma arquitetura modular (routes, models, services) é altamente recomendada para manutenibilidade.
+-   **Armazenamento de Arquivos:** Uploads de logo e banner são salvos localmente na pasta . Isso não é persistente e os arquivos são perdidos a cada novo deploy, causando erros 404. A solução é migrar para um serviço de armazenamento em nuvem.
+-   **Débito Técnico:** O arquivo  é um monolito com quase 5000 linhas, dificultando a manutenção. Uma refatoração para uma estrutura modular (routes, services, models) é recomendada.
 
 **Known issue recurrence from previous fork**
--   **Ativação Indevida de Assinatura:** O problema de conceder acesso a recursos pagos antes da confirmação do pagamento é um tema recorrente. Várias brechas foram fechadas, mas a recorrência indica uma fragilidade arquitetônica que exige atenção contínua.
+-   **Falhas na Integração com WhatsApp:** A integração com o Twilio tem sido uma fonte recorrente de problemas, desde configuração incorreta (número, ) até o atual bloqueio de conta. Exige atenção especial a cada modificação.
 
 **Code Architecture**
 
@@ -74,67 +90,78 @@ Um aplicativo full-stack (React + FastAPI) que passou por uma série de correç�
 -   **Backend:** FastAPI, Python, MongoDB
 -   **Frontend:** React, Tailwind CSS
 -   **Autenticação:** JWT (JSON Web Tokens)
--   **Integrações:** Mercado Pago, Twilio
+-   **Pagamentos:** Mercado Pago (PIX e Cartão de Crédito)
+-   **Notificações:** Twilio (WhatsApp)
 
 **key DB schema**
--   **payments:** Nova coleção para rastrear pagamentos avulsos (PIX).
--   **barbershops:** Adicionados campos  (datetime) e  (bool).
+-   **barbershops:** Adicionados campos  e  para a nova funcionalidade de ajuste de banner.
 
 **changes in tech stack**
--   Adicionado  para hashing de senha no backend.
+-    foi atualizado para  no  para corrigir um erro de  em produção.
 
 **All files of reference**
--   : Arquivo principal do backend, massivamente modificado para correções de segurança, pagamentos e lógica de assinatura.
--   : Contém a lógica de verificação de status do plano, crucial para a segurança do frontend.
--   : Página recém-criada e reescrita para exibir o QR Code e aguardar a confirmação do pagamento de forma segura.
--   : Página recém-criada e reescrita para aguardar a confirmação de pagamentos (especialmente de cartão) de forma segura.
--   : Contém as rotas protegidas () que garantem que apenas usuários com plano ativo acessem o dashboard.
--   : Modificada para refletir corretamente o status de assinaturas canceladas.
+-   : Arquivo principal do backend. Sofreu alterações significativas no webhook do Mercado Pago, nas rotas de autenticação, no Super Admin e, principalmente, em toda a lógica de envio de WhatsApp.
+-   : Contém o novo modal e lógica para ajuste de zoom e posição do banner.
+-   : Adicionada a função e o botão para excluir barbearias.
+-   : Corrigido o problema de contraste dos botões de horário e atualizada a renderização do banner com os novos campos de ajuste.
+-   : Atualizado com múltiplas variáveis de ambiente para os templates do Twilio e o .
+-   : Nova documentação técnica.
+-   : Novo guia do usuário.
 
 **Areas that need refactoring**:
--    precisa urgentemente ser dividido em módulos.
+-   : Precisa ser refatorado em uma arquitetura de múltiplos arquivos (routes, services, models) para melhorar a manutenibilidade.
+-   **Sistema de Uploads:** A lógica de upload de arquivos precisa ser refatorada para usar um serviço de armazenamento em nuvem em vez do sistema de arquivos local.
 
 **key api endpoints**
--   **Novos:**
-    -   : Health check.
-    -   : Verifica o status de um pagamento PIX (usado para polling).
 -   **Modificados:**
-    -   : Lógica dividida para PIX e Cartão.
-    -   : Lógica corrigida para não revogar o acesso imediatamente.
-    -   : Agora é a única fonte da verdade para ativar assinaturas.
-    -   A maioria dos endpoints de barbearia (serviços, agendamentos, etc.) agora são protegidos e exigem uma assinatura ativa.
--   **Removidos:**
-    -   : Removido por ser uma falha de segurança crítica.
+    -   : Adicionados logs detalhados e tratamento de exceção para depurar erros 502.
+    -   : Parser do  corrigido.
+    -    (PUT): Agora aceita os campos  e .
+    -    (POST): A lógica de envio de notificação foi completamente refeita.
+-   **Novos:**
+    -   : Endpoint na raiz da aplicação para health checks do Kubernetes.
 
 **Critical Info for New Agent**
--   **PRIORIDADE MÁXIMA:** A tarefa atual é finalizar e validar a correção de uma vulnerabilidade de segurança crítica que permite acesso pago sem pagamento. O plano só pode ser ativado pelo webhook do Mercado Pago. O frontend deve apenas aguardar essa confirmação.
--   **Dupla Camada de Segurança:** O sistema agora possui uma camada de segurança no frontend ( e  em ) e uma camada mais forte no backend (dependência ). Ambas devem ser mantidas.
--   **Ambientes Separados:** Lembre ao usuário que o banco de dados que você manipula é de desenvolvimento (). O banco de produção dele está no Atlas e não é acessado por você.
--   **Recorrência do Bug:** A falha de acesso sem pagamento já apareceu de várias formas. Seja extremamente cético e teste todos os cenários de borda relacionados ao fluxo de pagamento e criação de conta.
+-   **O PROBLEMA DO WHATSAPP É EXTERNO:** O código de envio de mensagens via Twilio está **correto**. O problema (erro 63112) foi diagnosticado como uma conta WABA (WhatsApp Business Account) **restringida/banida** do lado do usuário. Você está aguardando que o usuário crie uma nova conta e forneça um novo número de WhatsApp Sender. Não modifique a lógica de envio de WhatsApp no  a menos que seja estritamente necessário.
+-   **ARMAZENAMENTO NÃO PERSISTENTE:** Lembre-se que as imagens de logo e banner são salvas localmente e serão perdidas a cada deploy. Comunique isso ao usuário se ele relatar que as imagens somem.
+-   **MONOLITO NO BACKEND:** O arquivo  é extremamente grande. Tenha cuidado ao fazer alterações.
 
 **documents and test reports created in this job**
--   Nenhum documento novo foi criado.
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Pendente:** O usuário reportou que, mesmo com as correções anteriores, o fluxo de pagamento PIX ainda está inseguro, ativando o plano sem confirmação real do webhook. Ele solicitou que a ativação seja feita EXCLUSIVAMENTE pelo webhook e que o frontend apenas aguarde em uma tela de pagamento pendente.
+1.  **User:** Reporta que a conta WABA está banida e irá criar uma nova.
+2.  **Agent:** Confirma que essa é a causa do problema, que o código está correto e fornece um checklist para quando a nova conta estiver pronta.
+3.  **User:** Pede um texto com todas as funcionalidades do BarberHub para um público técnico.
+4.  **Agent:** Analisa o código e cria o arquivo .
+5.  **User:** Pede um guia de funcionalidades para o cliente final.
+6.  **Agent:** Cria o arquivo .
+7.  **User:** Avisa que os templates estão aprovados e as variáveis de ambiente configuradas, e que fará o deploy.
+8.  **Agent:** Confirma e fornece um checklist de testes pós-deploy.
+9.  **User:** Reporta que o WhatsApp não funcionou após o deploy e não há logs.
+10. **Agent:** Explica que os logs são do ambiente de preview, não de produção, e pede os logs de produção ou mais detalhes.
 
 **Project Health Check:**
--   **Broken:** O fluxo de pagamento é funcionalmente inseguro e concede acesso indevido, tornando o aplicativo inviável para produção até que seja corrigido.
--   **Mocked:** N/A.
+-   **Broken:** A integração com o WhatsApp está completamente quebrada devido a um bloqueio na conta WABA do usuário, impedindo uma funcionalidade central do sistema.
+-   **Mocked:** N/A
 
 **3rd Party Integrations**
--   **Mercado Pago (Payments):** Usado para assinaturas (cartão) e pagamentos avulsos (PIX).
--   **Twilio (WhatsApp):** Usado para notificações.
+-   **Mercado Pago (Payments):** Integração para pagamentos de assinatura (Cartão de Crédito) e avulsos (PIX).
+-   **Twilio (WhatsApp):** Integração para envio de notificações transacionais via templates. Atualmente bloqueada pela conta do usuário.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (para o fluxo de pagamento PIX).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** A vulnerabilidade de segurança que permite acesso a recursos pagos sem confirmação de pagamento é uma regressão crítica e recorrente.
+-   **Known regressions:** A funcionalidade do WhatsApp regrediu, mas a causa foi identificada como um problema externo (conta banida).
 
 **Credentials to test flow:**
 -   **Conta Demo (desenvolvimento):**  | 
 
 **What agent forgot to execute**
--   O agente anterior não corrigiu um erro de lint no arquivo , optando por ignorá-lo. Isso pode mascarar um problema real.
--   Não foi realizado um teste completo do novo fluxo de pagamento baseado em polling após as últimas modificações, que eram a resposta direta ao último pedido crítico do usuário.</analysis>
+-   O agente identificou e documentou os principais débitos técnicos (monolito no backend e armazenamento de arquivos local), mas não os abordou, o que é apropriado, pois são tarefas futuras de refatoração e não faziam parte das solicitações imediatas do usuário. Nenhuma tarefa solicitada foi esquecida.</analysis>
