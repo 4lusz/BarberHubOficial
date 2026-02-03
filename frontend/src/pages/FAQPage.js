@@ -218,23 +218,17 @@ export default function FAQPage() {
             Entre em contato com a gente que ajudamos você!
           </p>
           <a 
-            href="mailto:barberhub44@gmail.com"
+            href="mailto:contato@barberhubpro.com.br"
             className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
           >
             <Mail className="w-5 h-5" />
-            barberhub44@gmail.com
+            contato@barberhubpro.com.br
           </a>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} BarberHub. Todos os direitos reservados.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
