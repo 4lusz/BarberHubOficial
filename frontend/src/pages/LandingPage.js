@@ -666,7 +666,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-border">
+      <footer className="py-12 border-t border-border bg-zinc-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Main Footer Content */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
@@ -687,6 +687,11 @@ export default function LandingPage() {
             <div>
               <h4 className="font-heading font-bold uppercase text-sm mb-4">Links Úteis</h4>
               <ul className="space-y-2 text-sm">
+                <li>
+                  <Link to="/sobre" className="text-muted-foreground hover:text-primary transition-colors">
+                    Sobre Nós
+                  </Link>
+                </li>
                 <li>
                   <Link to="/faq" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
                     <HelpCircle className="w-4 h-4" />
@@ -725,35 +730,43 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Contact */}
+            {/* Dados da Empresa */}
             <div>
-              <h4 className="font-heading font-bold uppercase text-sm mb-4">Contato</h4>
-              <a 
-                href="mailto:barberhub44@gmail.com" 
-                className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 text-sm"
-              >
-                <Mail className="w-4 h-4" />
-                barberhub44@gmail.com
-              </a>
-              <p className="text-xs text-muted-foreground mt-4">
-                Responderemos em até 24 horas úteis
-              </p>
+              <h4 className="font-heading font-bold uppercase text-sm mb-4">Dados da Empresa</h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p className="font-medium text-zinc-300">64.876.912 ALUISIO MOURA PRADO</p>
+                <p>CNPJ: 64.876.912/0001-90</p>
+                <p>Rua Palestina 1774, Jataí/GO - 75803-110</p>
+                <a 
+                  href="tel:+5564999766685" 
+                  className="block hover:text-primary transition-colors"
+                >
+                  +55 64 99976-6685
+                </a>
+                <a 
+                  href="mailto:contato@barberhubpro.com.br" 
+                  className="flex items-center gap-2 hover:text-primary transition-colors"
+                >
+                  <Mail className="w-4 h-4" />
+                  contato@barberhubpro.com.br
+                </a>
+              </div>
             </div>
           </div>
 
           {/* Bottom Bar */}
-          <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="pt-8 border-t border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} BarberHub. Todos os direitos reservados.
             </p>
             <p className="text-xs text-muted-foreground">
-              Feito com 💈 para barbearias{' '}
+              Operado por 64.876.912 ALUISIO MOURA PRADO - CNPJ: 64.876.912/0001-90{' '}
               <Link 
                 to="/super-admin" 
-                className="text-muted-foreground/50 hover:text-primary transition-colors"
+                className="text-muted-foreground/30 hover:text-primary transition-colors ml-2"
                 title="Área restrita"
               >
-                brasileiras
+                •
               </Link>
             </p>
           </div>
