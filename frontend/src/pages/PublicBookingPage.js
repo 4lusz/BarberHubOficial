@@ -914,8 +914,14 @@ export default function PublicBookingPage() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Serviço</span>
-                    <span className="text-white">{booking.service?.name}</span>
+                    <span className="text-gray-400">Serviço(s)</span>
+                    <span className="text-white text-right max-w-[60%]">
+                      {booking.services.map(s => s.name).join(', ')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Duração total</span>
+                    <span className="text-white">{totalDuration} min</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Data</span>
@@ -936,11 +942,11 @@ export default function PublicBookingPage() {
                     <div className="pt-2 border-t border-gray-700">
                       <div className="flex justify-between text-gray-400">
                         <span>Valor original</span>
-                        <span className="line-through">{formatCurrency(booking.service?.price || 0)}</span>
+                        <span className="line-through">{formatCurrency(totalPrice)}</span>
                       </div>
                       <div className="flex justify-between text-yellow-500">
                         <span>🌟 Desconto VIP ({vipInfo.discount_percentage}%)</span>
-                        <span>-{formatCurrency((booking.service?.price || 0) * vipInfo.discount_percentage / 100)}</span>
+                        <span>-{formatCurrency(totalPrice * vipInfo.discount_percentage / 100)}</span>
                       </div>
                       <div className="flex justify-between font-medium mt-1">
                         <span className="text-white">Total</span>
@@ -950,7 +956,7 @@ export default function PublicBookingPage() {
                   ) : (
                     <div className="flex justify-between pt-2 border-t border-gray-700 font-medium">
                       <span className="text-white">Total</span>
-                      <span style={{ color: primaryColor }}>{formatCurrency(booking.service?.price || 0)}</span>
+                      <span style={{ color: primaryColor }}>{formatCurrency(totalPrice)}</span>
                     </div>
                   )}
                 </CardContent>
