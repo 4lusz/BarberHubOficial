@@ -918,7 +918,6 @@ export default function PublicBookingPage() {
                   data-testid="client-email-input"
                 />
               </div>
-              </div>
 
               {/* Summary */}
               <Card className="border-zinc-700 bg-zinc-800/50">
