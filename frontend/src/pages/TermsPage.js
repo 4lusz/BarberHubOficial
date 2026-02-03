@@ -147,13 +147,7 @@ export default function TermsPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} BarberHub. Todos os direitos reservados.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
