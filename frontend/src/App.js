@@ -27,6 +27,7 @@ import SuperAdminPage from './pages/SuperAdminPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import FAQPage from './pages/FAQPage';
+import AboutPage from './pages/AboutPage';
 
 // Layout
 import DashboardLayout from './components/layouts/DashboardLayout';
