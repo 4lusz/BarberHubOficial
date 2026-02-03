@@ -237,8 +237,8 @@ export default function PublicBookingPage() {
   };
 
   const calculateFinalPrice = () => {
-    if (!booking.service) return 0;
-    const originalPrice = booking.service.price;
+    if (booking.services.length === 0) return 0;
+    const originalPrice = totalPrice;
     if (vipInfo.is_vip && vipInfo.discount_percentage > 0) {
       return originalPrice * (1 - vipInfo.discount_percentage / 100);
     }
@@ -260,7 +260,7 @@ export default function PublicBookingPage() {
     try {
       const response = await api.post('/appointments', {
         barbershop_id: data.barbershop.barbershop_id,
-        service_id: booking.service.service_id,
+        service_ids: booking.services.map(s => s.service_id),  // Changed to service_ids array
         professional_id: booking.professional?.professional_id || null,
         date: format(booking.date, 'yyyy-MM-dd'),
         time: booking.time,
