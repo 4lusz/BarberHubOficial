@@ -632,10 +632,13 @@ export default function PublicBookingPage() {
         {/* Progress Steps */}
         <div className="flex items-center justify-between mb-6">
           {step !== 'service' && (
-            <Button variant="ghost" onClick={goBack} className="text-gray-400 hover:text-white">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
+            <button 
+              onClick={goBack} 
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors py-2 px-3 rounded-lg hover:bg-zinc-800"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Voltar</span>
+            </button>
           )}
           <div className="flex items-center gap-2 ml-auto">
             {['service', 'datetime', 'info'].map((s, index) => (
