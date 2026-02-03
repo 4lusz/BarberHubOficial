@@ -919,53 +919,59 @@ export default function PublicBookingPage() {
               </div>
 
               {/* Summary */}
-              <Card className="border-gray-700 bg-gray-800/30">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white">Resumo do Agendamento</CardTitle>
+              <Card className="border-zinc-700 bg-zinc-800/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5" style={{ color: primaryColor }} />
+                    Resumo do Agendamento
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between items-start">
                     <span className="text-gray-400">Serviço(s)</span>
-                    <span className="text-white text-right max-w-[60%]">
+                    <span className="text-white text-right max-w-[60%] font-medium">
                       {booking.services.map(s => s.name).join(', ')}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Duração total</span>
-                    <span className="text-white">{totalDuration} min</span>
+                    <span className="text-white font-medium">{totalDuration} min</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Data</span>
-                    <span className="text-white">{booking.date && format(booking.date, "dd/MM/yyyy")}</span>
+                    <span className="text-white font-medium">{booking.date && format(booking.date, "dd/MM/yyyy")}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Horário</span>
-                    <span className="text-white">{booking.time}</span>
+                    <span className="text-white font-medium">{booking.time}</span>
                   </div>
                   {booking.professional && (
                     <div className="flex justify-between">
                       <span className="text-gray-400">Profissional</span>
-                      <span className="text-white">{booking.professional.name}</span>
+                      <span className="text-white font-medium">{booking.professional.name}</span>
                     </div>
                   )}
                   
                   {vipInfo.is_vip && vipInfo.discount_percentage > 0 ? (
-                    <div className="pt-2 border-t border-gray-700">
+                    <div className="pt-3 border-t border-zinc-700 space-y-2">
                       <div className="flex justify-between text-gray-400">
                         <span>Valor original</span>
                         <span className="line-through">{formatCurrency(totalPrice)}</span>
                       </div>
                       <div className="flex justify-between text-yellow-500">
-                        <span>🌟 Desconto VIP ({vipInfo.discount_percentage}%)</span>
+                        <span className="flex items-center gap-1">
+                          <Star className="w-3 h-3" fill="currentColor" />
+                          Desconto VIP ({vipInfo.discount_percentage}%)
+                        </span>
                         <span>-{formatCurrency(totalPrice * vipInfo.discount_percentage / 100)}</span>
                       </div>
-                      <div className="flex justify-between font-medium mt-1">
+                      <div className="flex justify-between font-semibold text-base pt-1">
                         <span className="text-white">Total</span>
                         <span style={{ color: primaryColor }}>{formatCurrency(calculateFinalPrice())}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex justify-between pt-2 border-t border-gray-700 font-medium">
+                    <div className="flex justify-between pt-3 border-t border-zinc-700 font-semibold text-base">
                       <span className="text-white">Total</span>
                       <span style={{ color: primaryColor }}>{formatCurrency(totalPrice)}</span>
                     </div>
@@ -975,12 +981,19 @@ export default function PublicBookingPage() {
 
               <Button
                 type="submit"
-                className="w-full btn-press text-lg h-12 text-black"
+                className="w-full h-14 text-lg font-bold text-black transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: primaryColor }}
                 disabled={submitting}
                 data-testid="confirm-booking-button"
               >
-                {submitting ? 'Agendando...' : 'Confirmar Agendamento'}
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    Agendando...
+                  </span>
+                ) : (
+                  'Confirmar Agendamento'
+                )}
               </Button>
             </form>
           </div>
