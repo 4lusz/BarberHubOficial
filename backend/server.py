@@ -2820,10 +2820,20 @@ async def get_client_appointments(current_user: dict = Depends(get_current_user)
             apt["barbershop_latitude"] = barbershop.get("latitude")
             apt["barbershop_longitude"] = barbershop.get("longitude")
         
-        service = await db.services.find_one({"service_id": apt["service_id"]}, {"_id": 0})
-        if service:
-            apt["service_name"] = service["name"]
-            apt["service_price"] = service["price"]
+        # Handle both old (service_id) and new (service_ids) format
+        apt_service_ids = apt.get("service_ids", [apt.get("service_id")] if apt.get("service_id") else [])
+        service_names = []
+        total_price = 0
+        
+        for sid in apt_service_ids:
+            service = await db.services.find_one({"service_id": sid}, {"_id": 0})
+            if service:
+                service_names.append(service["name"])
+                total_price += service["price"]
+        
+        apt["service_names"] = service_names
+        apt["service_name"] = ", ".join(service_names)
+        apt["service_price"] = total_price
     
     return appointments
 
