@@ -892,29 +892,30 @@ export default function PublicBookingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientName" className="text-white">Nome completo *</Label>
+                <Label htmlFor="clientName" className="text-white font-medium">Nome completo *</Label>
                 <Input
                   id="clientName"
-                  placeholder="Seu nome"
+                  placeholder="Seu nome completo"
                   value={booking.clientName}
                   onChange={(e) => setBooking({ ...booking, clientName: e.target.value })}
                   required
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-zinc-800 border-zinc-700 text-white h-12 focus:border-amber-500 focus:ring-amber-500"
                   data-testid="client-name-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientEmail" className="text-white">Email (opcional)</Label>
+                <Label htmlFor="clientEmail" className="text-white font-medium">Email (opcional)</Label>
                 <Input
                   id="clientEmail"
                   type="email"
                   placeholder="seu@email.com"
                   value={booking.clientEmail}
                   onChange={(e) => setBooking({ ...booking, clientEmail: e.target.value })}
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-zinc-800 border-zinc-700 text-white h-12 focus:border-amber-500 focus:ring-amber-500"
                   data-testid="client-email-input"
                 />
+              </div>
               </div>
 
               {/* Summary */}
