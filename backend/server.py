@@ -2755,11 +2755,19 @@ async def get_appointments(
     appointments = await db.appointments.find(query, {"_id": 0}).sort("time", 1).to_list(1000)
     
     # Batch fetch all services and professionals to avoid N+1 queries
-    service_ids = list(set(apt.get("service_id") for apt in appointments if apt.get("service_id")))
+    # Collect all service IDs (support both old single service_id and new service_ids array)
+    all_service_ids = set()
+    for apt in appointments:
+        if apt.get("service_ids"):
+            all_service_ids.update(apt["service_ids"])
+        elif apt.get("service_id"):
+            all_service_ids.add(apt["service_id"])
+    
+    service_ids = list(all_service_ids)
     professional_ids = list(set(apt.get("professional_id") for apt in appointments if apt.get("professional_id")))
     
-    services = await db.services.find({"service_id": {"$in": service_ids}}, {"_id": 0}).to_list(len(service_ids))
-    professionals = await db.professionals.find({"professional_id": {"$in": professional_ids}}, {"_id": 0}).to_list(len(professional_ids))
+    services = await db.services.find({"service_id": {"$in": service_ids}}, {"_id": 0}).to_list(len(service_ids)) if service_ids else []
+    professionals = await db.professionals.find({"professional_id": {"$in": professional_ids}}, {"_id": 0}).to_list(len(professional_ids)) if professional_ids else []
     
     # Create lookup dictionaries
     services_map = {s["service_id"]: s for s in services}
@@ -2767,11 +2775,24 @@ async def get_appointments(
     
     # Enrich appointments
     for apt in appointments:
-        service = services_map.get(apt.get("service_id"))
-        if service:
-            apt["service_name"] = service["name"]
-            apt["service_duration"] = service["duration"]
-            apt["service_price"] = service["price"]
+        # Handle both old (service_id) and new (service_ids) format
+        apt_service_ids = apt.get("service_ids", [apt.get("service_id")] if apt.get("service_id") else [])
+        
+        service_names = []
+        total_duration = 0
+        total_price = 0
+        
+        for sid in apt_service_ids:
+            service = services_map.get(sid)
+            if service:
+                service_names.append(service["name"])
+                total_duration += service["duration"]
+                total_price += service["price"]
+        
+        apt["service_names"] = service_names
+        apt["service_name"] = ", ".join(service_names)  # For backward compatibility
+        apt["service_duration"] = total_duration
+        apt["service_price"] = total_price
         
         if apt.get("professional_id"):
             prof = professionals_map.get(apt["professional_id"])
