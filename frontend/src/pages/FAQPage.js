@@ -185,7 +185,7 @@ export default function FAQPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-4xl mx-auto px-4 py-12 flex-grow">
         <div className="text-center mb-12">
           <h1 className="font-heading text-4xl font-bold uppercase mb-4">Perguntas Frequentes</h1>
           <p className="text-muted-foreground text-lg">
