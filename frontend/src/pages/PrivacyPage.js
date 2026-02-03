@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Scissors, ArrowLeft, Mail } from 'lucide-react';
+import Footer from '../components/Footer';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -24,7 +25,7 @@ export default function PrivacyPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-4xl mx-auto px-4 py-12 flex-grow">
         <h1 className="font-heading text-4xl font-bold uppercase mb-8">Política de Privacidade</h1>
         
         <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground">
