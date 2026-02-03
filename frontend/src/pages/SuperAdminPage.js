@@ -101,8 +101,47 @@ export default function SuperAdminPage() {
         api.get('/super-admin/dashboard', { headers }),
         api.get('/super-admin/barbershops', { headers })
       ]);
-      setDashboard(dashRes.data);
-      setBarbershops(shopsRes.data.barbershops);
+      
+      // Ensure all required fields exist with defaults
+      const dashboardData = {
+        overview: {
+          active_barbershops: 0,
+          total_barbershops: 0,
+          pending_barbershops: 0,
+          expired_barbershops: 0,
+          appointments_today: 0,
+          total_appointments: 0,
+          barbers: 0,
+          clients: 0,
+          total_vip_clients: 0,
+          total_users: 0,
+          ...dashRes.data.overview
+        },
+        financial: {
+          mrr: 0,
+          comum_subscriptions: 0,
+          premium_subscriptions: 0,
+          revenue_comum: 0,
+          revenue_premium: 0,
+          failed_subscriptions: 0,
+          ...dashRes.data.financial
+        },
+        growth: {
+          new_signups_7d: 0,
+          churn_rate: 0,
+          ...dashRes.data.growth
+        },
+        integrations: {
+          mercadopago: { configured: false },
+          whatsapp: { configured: false },
+          whatsapp_respondio: { configured: false },
+          email_resend: { configured: false },
+          ...dashRes.data.integrations
+        }
+      };
+      
+      setDashboard(dashboardData);
+      setBarbershops(shopsRes.data.barbershops || []);
     } catch (error) {
       if (error.response?.status === 401) {
         handleLogout();
