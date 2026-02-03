@@ -931,17 +931,23 @@ async def check_and_send_reminders():
                 {"barbershop_id": apt["barbershop_id"]},
                 {"_id": 0}
             )
-            service = await db.services.find_one(
-                {"service_id": apt["service_id"]},
-                {"_id": 0}
-            )
             
-            if barbershop and service:
+            # Handle both old (service_id) and new (service_ids) format
+            apt_service_ids = apt.get("service_ids", [apt.get("service_id")] if apt.get("service_id") else [])
+            service_names = []
+            for sid in apt_service_ids:
+                service = await db.services.find_one({"service_id": sid}, {"_id": 0})
+                if service:
+                    service_names.append(service["name"])
+            
+            services_text = ", ".join(service_names) if service_names else "Serviço"
+            
+            if barbershop and service_names:
                 # Send WhatsApp reminder with barbershop location
                 result = await send_whatsapp_reminder(
                     phone=apt["client_phone"],
                     barbershop_name=barbershop["name"],
-                    service_name=service["name"],
+                    service_name=services_text,
                     date=apt["date"],
                     time=apt["time"],
                     address=barbershop.get("address"),
