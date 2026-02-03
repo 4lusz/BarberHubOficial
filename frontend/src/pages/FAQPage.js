@@ -15,6 +15,7 @@ import {
   Shield,
   MessageCircle
 } from 'lucide-react';
+import Footer from '../components/Footer';
 
 const faqs = [
   {
