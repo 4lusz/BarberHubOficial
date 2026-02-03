@@ -832,22 +832,24 @@ export default function PublicBookingPage() {
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {availableSlots.map((slot) => (
-                      <Button
-                        key={slot.time}
-                        variant={booking.time === slot.time ? "default" : "outline"}
-                        onClick={() => handleTimeSelect(slot.time)}
-                        className="min-w-0 px-2"
-                        style={
-                          booking.time === slot.time 
-                            ? { backgroundColor: primaryColor, color: '#000' } 
-                            : { backgroundColor: '#1f2937', borderColor: '#4b5563', color: '#fff' }
-                        }
-                        data-testid={`time-${slot.time}`}
-                      >
-                        {slot.time}
-                      </Button>
-                    ))}
+                    {availableSlots.map((slot) => {
+                      const isSelected = booking.time === slot.time;
+                      return (
+                        <button
+                          key={slot.time}
+                          onClick={() => handleTimeSelect(slot.time)}
+                          className={`py-2.5 px-3 rounded-lg font-medium transition-all text-sm ${
+                            isSelected 
+                              ? 'text-black shadow-lg transform scale-105' 
+                              : 'bg-zinc-800 text-white border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-700'
+                          }`}
+                          style={isSelected ? { backgroundColor: primaryColor } : {}}
+                          data-testid={`time-${slot.time}`}
+                        >
+                          {slot.time}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
