@@ -4285,7 +4285,7 @@ async def super_admin_create_barbershop(
         
         # Create user
         user_id = generate_id("user")
-        password_hash = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        password_hash = hash_password(data.password)
         
         user_doc = {
             "user_id": user_id,
