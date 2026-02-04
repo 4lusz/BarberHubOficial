@@ -57,6 +57,16 @@ export default function SuperAdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPlan, setFilterPlan] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    owner_name: '',
+    email: '',
+    password: '',
+    phone: '',
+    plan: 'premium'
+  });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('super_admin_token');
