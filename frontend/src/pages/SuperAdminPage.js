@@ -976,6 +976,141 @@ export default function SuperAdminPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Barbershop Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="w-5 h-5 text-primary" />
+              Criar Nova Barbearia
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleCreateBarbershop} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-name">Nome da Barbearia *</Label>
+              <Input
+                id="create-name"
+                placeholder="Ex: Barbearia do João"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-owner">Nome do Responsável *</Label>
+              <Input
+                id="create-owner"
+                placeholder="Nome completo"
+                value={createForm.owner_name}
+                onChange={(e) => setCreateForm({ ...createForm, owner_name: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-email">Email de Acesso *</Label>
+              <Input
+                id="create-email"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-password">Senha *</Label>
+              <Input
+                id="create-password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-phone">WhatsApp (opcional)</Label>
+              <Input
+                id="create-phone"
+                placeholder="(64) 99999-9999"
+                value={createForm.phone}
+                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Plano</Label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCreateForm({ ...createForm, plan: 'comum' })}
+                  className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+                    createForm.plan === 'comum' 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-muted-foreground'
+                  }`}
+                >
+                  <div className="text-sm font-medium">Comum</div>
+                  <div className="text-xs text-muted-foreground">R$ 49,90/mês</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateForm({ ...createForm, plan: 'premium' })}
+                  className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+                    createForm.plan === 'premium' 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-muted-foreground'
+                  }`}
+                >
+                  <div className="text-sm font-medium flex items-center gap-1">
+                    <Crown className="w-4 h-4 text-primary" />
+                    Premium
+                  </div>
+                  <div className="text-xs text-muted-foreground">R$ 99,90/mês</div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
+              <p className="text-green-400 font-medium">✓ Conta ativada por 1 ano</p>
+              <p className="text-muted-foreground text-xs mt-1">
+                Sem necessidade de pagamento. A assinatura ficará ativa por 12 meses.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1 bg-primary text-black"
+                disabled={creating}
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  'Criar Barbearia'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
