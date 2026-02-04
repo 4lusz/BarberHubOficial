@@ -4277,98 +4277,108 @@ async def super_admin_create_barbershop(
 ):
     """Create a new barbershop with active subscription (no payment required)"""
     
-    # Check if email already exists
-    existing_user = await db.users.find_one({"email": data.email.lower()})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email já cadastrado")
-    
-    # Create user
-    user_id = generate_id("user")
-    password_hash = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
-    user_doc = {
-        "user_id": user_id,
-        "email": data.email.lower(),
-        "password_hash": password_hash,
-        "name": data.owner_name,
-        "role": "barbershop",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.users.insert_one(user_doc)
-    
-    # Create barbershop
-    barbershop_id = generate_id("barber")
-    slug = generate_slug(data.name)
-    
-    barbershop_doc = {
-        "barbershop_id": barbershop_id,
-        "user_id": user_id,
-        "owner_id": user_id,
-        "name": data.name,
-        "slug": slug,
-        "description": f"Barbearia {data.name}",
-        "phone": data.phone,
-        "plan": data.plan,
-        "plan_status": "active",
-        "primary_color": "#F59E0B",
-        "background_color": "#09090B",
-        "font_style": "modern",
-        "working_hours": {
-            "monday": {"open": "09:00", "close": "19:00", "enabled": True},
-            "tuesday": {"open": "09:00", "close": "19:00", "enabled": True},
-            "wednesday": {"open": "09:00", "close": "19:00", "enabled": True},
-            "thursday": {"open": "09:00", "close": "19:00", "enabled": True},
-            "friday": {"open": "09:00", "close": "19:00", "enabled": True},
-            "saturday": {"open": "09:00", "close": "17:00", "enabled": True},
-            "sunday": {"open": "09:00", "close": "13:00", "enabled": False}
-        },
-        "slot_interval": 30,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.barbershops.insert_one(barbershop_doc)
-    
-    # Create subscription (already active, no payment needed)
-    subscription_id = generate_id("sub")
-    subscription_doc = {
-        "subscription_id": subscription_id,
-        "barbershop_id": barbershop_id,
-        "user_id": user_id,
-        "plan": data.plan,
-        "status": "active",
-        "payment_method": "admin_created",
-        "amount": 99.90 if data.plan == "premium" else 49.90,
-        "current_period_start": datetime.now(timezone.utc).isoformat(),
-        "current_period_end": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat(),  # 1 year
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "created_by_admin": True
-    }
-    await db.subscriptions.insert_one(subscription_doc)
-    
-    # Add default service
-    service_doc = {
-        "service_id": generate_id("serv"),
-        "barbershop_id": barbershop_id,
-        "name": "Corte Masculino",
-        "description": "Corte tradicional masculino",
-        "duration": 30,
-        "price": 45.00,
-        "active": True,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.services.insert_one(service_doc)
-    
-    return {
-        "success": True,
-        "message": "Barbearia criada com sucesso",
-        "barbershop": {
+    try:
+        # Check if email already exists
+        existing_user = await db.users.find_one({"email": data.email.lower()})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email já cadastrado")
+        
+        # Create user
+        user_id = generate_id("user")
+        password_hash = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        user_doc = {
+            "user_id": user_id,
+            "email": data.email.lower(),
+            "password_hash": password_hash,
+            "name": data.owner_name,
+            "role": "barbershop",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(user_doc)
+        logger.info(f"User created: {user_id}")
+        
+        # Create barbershop
+        barbershop_id = generate_id("barber")
+        slug = generate_slug(data.name)
+        
+        barbershop_doc = {
             "barbershop_id": barbershop_id,
+            "user_id": user_id,
+            "owner_id": user_id,
             "name": data.name,
             "slug": slug,
+            "description": f"Barbearia {data.name}",
+            "phone": data.phone,
             "plan": data.plan,
-            "email": data.email.lower()
+            "plan_status": "active",
+            "primary_color": "#F59E0B",
+            "background_color": "#09090B",
+            "font_style": "modern",
+            "working_hours": {
+                "monday": {"open": "09:00", "close": "19:00", "enabled": True},
+                "tuesday": {"open": "09:00", "close": "19:00", "enabled": True},
+                "wednesday": {"open": "09:00", "close": "19:00", "enabled": True},
+                "thursday": {"open": "09:00", "close": "19:00", "enabled": True},
+                "friday": {"open": "09:00", "close": "19:00", "enabled": True},
+                "saturday": {"open": "09:00", "close": "17:00", "enabled": True},
+                "sunday": {"open": "09:00", "close": "13:00", "enabled": False}
+            },
+            "slot_interval": 30,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
-    }
+        await db.barbershops.insert_one(barbershop_doc)
+        logger.info(f"Barbershop created: {barbershop_id}")
+        
+        # Create subscription (already active, no payment needed)
+        subscription_id = generate_id("sub")
+        subscription_doc = {
+            "subscription_id": subscription_id,
+            "barbershop_id": barbershop_id,
+            "user_id": user_id,
+            "plan": data.plan,
+            "status": "active",
+            "payment_method": "admin_created",
+            "amount": 99.90 if data.plan == "premium" else 49.90,
+            "current_period_start": datetime.now(timezone.utc).isoformat(),
+            "current_period_end": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by_admin": True
+        }
+        await db.subscriptions.insert_one(subscription_doc)
+        logger.info(f"Subscription created: {subscription_id}")
+        
+        # Add default service
+        service_doc = {
+            "service_id": generate_id("serv"),
+            "barbershop_id": barbershop_id,
+            "name": "Corte Masculino",
+            "description": "Corte tradicional masculino",
+            "duration": 30,
+            "price": 45.00,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.services.insert_one(service_doc)
+        logger.info(f"Default service created for barbershop: {barbershop_id}")
+        
+        return {
+            "success": True,
+            "message": "Barbearia criada com sucesso",
+            "barbershop": {
+                "barbershop_id": barbershop_id,
+                "name": data.name,
+                "slug": slug,
+                "plan": data.plan,
+                "email": data.email.lower()
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating barbershop: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao criar barbearia: {str(e)}")
 
 @api_router.get("/super-admin/subscriptions")
 async def super_admin_list_subscriptions(admin: dict = Depends(verify_super_admin)):
