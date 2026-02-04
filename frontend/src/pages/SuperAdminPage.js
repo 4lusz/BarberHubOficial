@@ -192,6 +192,28 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleCreateBarbershop = async (e) => {
+    e.preventDefault();
+    if (!createForm.name || !createForm.owner_name || !createForm.email || !createForm.password) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    
+    setCreating(true);
+    try {
+      const response = await api.post('/super-admin/barbershops', createForm, { headers: getAuthHeaders() });
+      toast.success(`Barbearia "${response.data.barbershop.name}" criada com sucesso!`);
+      setShowCreateModal(false);
+      setCreateForm({ name: '', owner_name: '', email: '', password: '', phone: '', plan: 'premium' });
+      loadDashboard();
+      loadBarbershops();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao criar barbearia');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const updateBarbershopStatus = async (barbershopId, status) => {
     try {
       await api.put(`/super-admin/barbershops/${barbershopId}/status?status=${status}`, {}, { headers: getAuthHeaders() });
