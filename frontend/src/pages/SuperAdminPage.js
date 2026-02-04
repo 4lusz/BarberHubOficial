@@ -477,7 +477,7 @@ export default function SuperAdminPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">WhatsApp (Twilio)</span>
-                    {dashboard.integrations?.whatsapp?.configured || dashboard.integrations?.whatsapp_respondio?.configured ? (
+                    {dashboard.integrations?.whatsapp?.configured || dashboard.integrations?.whatsapp_twilio?.configured || dashboard.integrations?.whatsapp_respondio?.configured ? (
                       <Badge className="bg-green-500/20 text-green-500">Configurado</Badge>
                     ) : (
                       <Badge variant="outline">Parcial</Badge>
