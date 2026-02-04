@@ -564,6 +564,15 @@ export default function SuperAdminPage() {
         {/* Barbershops Tab */}
         {activeTab === 'barbershops' && (
           <div className="space-y-4 animate-fade-in">
+            {/* Header with Create Button */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Barbearias</h2>
+              <Button onClick={() => setShowCreateModal(true)} className="bg-primary text-black">
+                <Store className="w-4 h-4 mr-2" />
+                Criar Barbearia
+              </Button>
+            </div>
+
             {/* Filters */}
             <div className="flex flex-wrap gap-3">
               <div className="relative flex-1 min-w-[200px]">
@@ -594,7 +603,7 @@ export default function SuperAdminPage() {
                 <option value="expired">Expirado</option>
                 <option value="pending">Pendente</option>
               </select>
-              <Button onClick={loadBarbershops}>
+              <Button onClick={loadBarbershops} variant="outline">
                 <Search className="w-4 h-4 mr-2" />
                 Filtrar
               </Button>
