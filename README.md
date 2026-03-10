@@ -51,8 +51,8 @@ Algumas tecnologias utilizadas no projeto:
 * API de Mensagens: Twilio (WhatsApp Business API)
 * Pagamentos: Mercado Pago
 * Deploy: emergent.sh
-* Banco de dados: (adicionar tecnologia utilizada)
-* Frontend: (adicionar tecnologia utilizada)
+* Banco de dados: MongoDB
+* Frontend: react
 
 ---
 
@@ -105,6 +105,15 @@ BarberHub foi criado para resolver um problema comum em barbearias:
 A plataforma automatiza esse processo e melhora a experiência tanto para barbeiros quanto para clientes.
 
 ---
+
+# 🏗 Arquitetura
+
+O sistema segue uma arquitetura separando:
+
+- Frontend responsável pela interface do usuário
+- Backend responsável pela lógica de negócio e APIs
+- Integrações externas (Twilio e Mercado Pago)
+- Banco de dados para persistência de agendamentos e clientes
 
 # 🔒 Licença
 
