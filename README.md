@@ -1,4 +1,4 @@
-# BarberHub 💈
+# BarberHub 
 
 BarberHub é uma plataforma SaaS desenvolvida para automatizar o gerenciamento de barbearias.
 A aplicação permite que barbearias recebam agendamentos online, organizem sua agenda e se comuniquem automaticamente com clientes via WhatsApp.
@@ -7,7 +7,7 @@ O objetivo do BarberHub é reduzir faltas em horários, facilitar o agendamento 
 
 ---
 
-# 🚀 Funcionalidades
+#  Funcionalidades
 
 ### Agendamento Online
 
@@ -43,7 +43,7 @@ O BarberHub funciona em modelo SaaS com dois planos:
 
 ---
 
-# 🛠 Tecnologias Utilizadas
+#  Tecnologias Utilizadas
 
 Algumas tecnologias utilizadas no projeto:
 
@@ -56,7 +56,7 @@ Algumas tecnologias utilizadas no projeto:
 
 ---
 
-# 📦 Estrutura do Projeto
+#  Estrutura do Projeto
 
 ```
 barberhub/
@@ -79,7 +79,7 @@ barberhub/
 
 ---
 
-# ⚙️ Integrações
+#  Integrações
 
 ### WhatsApp
 
@@ -94,7 +94,7 @@ O sistema utiliza Mercado Pago para cobrança de assinaturas.
 
 ---
 
-# 📈 Objetivo do Projeto
+#  Objetivo do Projeto
 
 BarberHub foi criado para resolver um problema comum em barbearias:
 
@@ -106,7 +106,7 @@ A plataforma automatiza esse processo e melhora a experiência tanto para barbei
 
 ---
 
-# 🏗 Arquitetura
+#  Arquitetura
 
 O sistema segue uma arquitetura separando:
 
@@ -115,13 +115,13 @@ O sistema segue uma arquitetura separando:
 - Integrações externas (Twilio e Mercado Pago)
 - Banco de dados para persistência de agendamentos e clientes
 
-# 🔒 Licença
+#  Licença
 
 Este projeto é proprietário e não possui licença de uso público.
 
 ---
 
-# 👨‍💻 Autor
+#  Autor
 
 Desenvolvido por **Aluisio Moura Prado**
 
